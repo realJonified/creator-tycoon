@@ -61,6 +61,9 @@ store.on('award', ({ award }) => {
   ctx.audio.play('award');
   ctx.toast(`${award.icon} ${award.name} geholt! +${fmtPercent(award.bonus ?? B.awardBonus)} Einnahmen`);
 });
+store.on('viral', result => {
+  if (!ctx.scenes.isOpen('viral')) ctx.scenes.openOverlay('viral', { result });
+});
 store.on('offline', r => {
   if (r.notice) ctx.toast(`😴 Während du weg warst: +${eur(r.money)} und +${fmt(r.subs)} Abos`);
 });

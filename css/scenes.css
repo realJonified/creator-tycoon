@@ -38,7 +38,8 @@
 .award.got .award-state { color: var(--money); font-weight: 700; }
 
 /* ---------- Titel und Tutorial ---------- */
-.scene-titel, .scene-tutorial { min-height: calc(100vh - 40px); justify-content: center; align-items: center; text-align: center; padding-bottom: 0; }
+body.no-nav #app { padding-bottom: 12px; }
+.scene-titel, .scene-tutorial { min-height: calc(100vh - 24px); min-height: calc(100dvh - 24px); justify-content: center; align-items: center; text-align: center; }
 .title-logo { font-size: 4.5rem; line-height: 1; animation: pop .5s ease; }
 .title-name { font-size: 2.2rem; font-weight: 800; margin: 0; }
 .title-name span { color: var(--accent); }

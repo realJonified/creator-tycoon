@@ -29,6 +29,7 @@ export function createHud({ hudEl, navEl, ctx }) {
   return {
     setActive(id, def) {
       hudEl.hidden = navEl.hidden = !def.nav;
+      document.body.classList.toggle('no-nav', !def.nav);
       for (const [sceneId, btn] of buttons) {
         if (sceneId === id) btn.setAttribute('aria-current', 'page'); else btn.removeAttribute('aria-current');
       }
