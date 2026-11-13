@@ -1,12 +1,12 @@
 // Alle Stellschrauben des Spiels an einem Ort. Nach Änderungen: node tools/balance.js
 export const BALANCE = {
   // Abos erhöhen die Einnahmen: Faktor = 1 + Wurzel(Abos) / subDivisor
-  subDivisor: 40,
+  subDivisor: 400,
   awardBonus: 0.25,        // Einnahmen-Bonus pro Award (wenn der Award keinen eigenen nennt)
   equipGrowth: 1.5,        // Preisanstieg pro Ausrüstungs-Stufe
   teamGrowth: 1.15,        // Preisanstieg pro Team-Mitglied
-  clickSubs: 0.5,          // Abos pro Video = Basiswert × clickSubs (mindestens 1)
-  viewSubs: 0.4,           // Abos pro Aufruf des Teams
+  clickSubs: 0.1,          // Abos pro Video = Basiswert × clickSubs (mindestens 1)
+  viewSubs: 0.05,          // Abos pro Aufruf des Teams
   viralChance: 0.02,
   viralMult: 10,
   offlineRate: 0.5,
@@ -15,7 +15,7 @@ export const BALANCE = {
   eventMinSeconds: 45,
   eventMaxSeconds: 120,
   eventTtlSeconds: 15,      // so lange bleibt ein Ereignis anklickbar
-  prestigeMinSubs: 1e6,     // ab so vielen Abos lohnt sich ein neuer Kanal
+  prestigeMinSubs: 2e6,     // ab so vielen Abos lohnt sich ein neuer Kanal
   fameBase: 3,              // Ruhm bei genau prestigeMinSubs
   fameExponent: 0.35,       // Ruhm = fameBase × (Abos / prestigeMinSubs) ^ fameExponent
   famePassive: 0.05,        // Einnahmen-Bonus pro jemals verdientem Ruhm-Punkt

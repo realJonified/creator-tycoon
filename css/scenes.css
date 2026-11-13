@@ -22,9 +22,10 @@
 
 .goal { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: center; padding: 10px 0; }
 .goal + .goal { border-top: 1px solid var(--line); }
-.goal-icon { font-size: 1.4rem; grid-row: span 2; }
-.goal .bar { grid-column: 2; margin-top: 0; }
-.goal .btn { grid-row: span 2; grid-column: 3; grid-row-start: 1; min-width: 92px; padding: 8px 10px; }
+.goal-icon { font-size: 1.4rem; grid-column: 1; grid-row: 1 / span 2; }
+.goal > div:nth-child(2) { grid-column: 2; grid-row: 1; min-width: 0; }
+.goal .bar { grid-column: 2; grid-row: 2; margin-top: 0; }
+.goal .btn { grid-column: 3; grid-row: 1 / span 2; min-width: 96px; padding: 8px 10px; white-space: nowrap; }
 .goal.claimed { opacity: .55; }
 
 /* ---------- Awards ---------- */
@@ -58,7 +59,8 @@ body.no-nav #app { padding-bottom: 12px; }
 .statgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin: 0; }
 .statgrid dt { color: var(--muted); font-size: .82rem; }
 .statgrid dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
-.btn.perk { min-width: 104px; white-space: nowrap; }
+.btn.perk { min-width: 72px; white-space: nowrap; }
+.item-name .sub { white-space: nowrap; }
 
 /* ---------- Overlays ---------- */
 .event-icon { font-size: 3rem; line-height: 1; text-align: center; }

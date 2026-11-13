@@ -2,8 +2,11 @@
 // Szenen rufen nur diese Funktionen auf und hören auf Store-Ereignisse.
 import { recordVideo, buy, tick, applyOffline } from './game.js';
 import { buyCount } from './formulas.js';
+import { tickEvents, resolveEvent } from './events.js';
+import { doPrestige, buyPerk } from './prestige.js';
+import { ensureGoals, tickGoals, claimGoal, dayKey } from './goals.js';
 
-export function createActions(store, { rng = Math.random } = {}) {
+export function createActions(store, { rng = Math.random, today = () => dayKey() } = {}) {
   const S = () => store.state;
 
   return {
@@ -24,12 +27,43 @@ export function createActions(store, { rng = Math.random } = {}) {
 
     tick(dt) {
       for (const e of tick(S(), dt)) store.emit(e.type, e);
+      const e = tickEvents(S(), dt, rng);
+      if (e) store.emit(e.type, e);
+      if (ensureGoals(S(), today())) store.emit('goals', S().goals);
+      for (const goal of tickGoals(S())) store.emit('goalDone', goal);
     },
 
     // Zeit, in der das Spiel nicht lief (Tab im Hintergrund oder geschlossen).
     away(seconds) {
       const result = applyOffline(S(), seconds);
       if (result) store.emit('offline', result);
+      return result;
+    },
+
+    // Ereignisse: öffnen hält die Uhr an, schliessen ohne Wahl lässt sie weiterlaufen.
+    openEvent() { if (S().event) S().event.open = true; },
+    closeEvent() { if (S().event) S().event.open = false; },
+    chooseEvent(index) {
+      const result = resolveEvent(S(), index, rng);
+      if (result) store.emit('eventResolved', result);
+      return result;
+    },
+
+    prestige() {
+      const gain = doPrestige(S(), rng);
+      if (gain > 0) store.emit('prestige', { gain });
+      return gain;
+    },
+
+    buyPerk(id) {
+      const ok = buyPerk(S(), id);
+      store.emit(ok ? 'perk' : 'denied', { id });
+      return ok;
+    },
+
+    claimGoal(index) {
+      const result = claimGoal(S(), index);
+      if (result) store.emit('goalClaimed', result);
       return result;
     },
   };

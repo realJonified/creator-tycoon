@@ -8,6 +8,7 @@ import { loadGame, saveGame } from './core/save.js';
 import { newState, applyOffline } from './core/game.js';
 import { eur, fmt, fmtPercent } from './core/format.js';
 import { BALANCE as B } from './data/balance.js';
+import { goalText } from './core/goals.js';
 import { createHud } from './ui/hud.js';
 import { createToast } from './ui/toast.js';
 import { SCENES, START_SCENE } from './scenes/index.js';
@@ -50,10 +51,11 @@ ctx.game = createActions(store);
 ctx.scenes = createSceneManager({
   root: $('scene'), overlayRoot: $('overlays'), appRoot: $('app'), ctx,
   animate: ctx.animations,
-  onChange: (id, def) => hud.setActive(id, def),
+  onChange: (id, def) => { playing = !!def.nav; hud.setActive(id, def); },
 });
+let playing = false;
 for (const scene of SCENES) ctx.scenes.register(scene);
-const hud = createHud({ hudEl: $('hud'), navEl: $('nav'), ctx });
+const hud = createHud({ hudEl: $('hud'), navEl: $('nav'), chipEl: $('eventChip'), ctx });
 ctx.applySettings();
 
 // ---------- Meldungen ----------
@@ -64,15 +66,21 @@ store.on('award', ({ award }) => {
 store.on('viral', result => {
   if (!ctx.scenes.isOpen('viral')) ctx.scenes.openOverlay('viral', { result });
 });
+store.on('event', () => ctx.audio.play('event'));
+store.on('goalDone', goal => {
+  ctx.audio.play('good');
+  ctx.toast(`🎯 Tagesziel erreicht: ${goalText(goal, fmt)}. Hol dir die Belohnung im Studio!`);
+});
 store.on('offline', r => {
   if (r.notice) ctx.toast(`😴 Während du weg warst: +${eur(r.money)} und +${fmt(r.subs)} Abos`);
 });
 
 // ---------- Loop ----------
 const loop = createLoop({
-  update(dt) { ctx.game.tick(dt); ctx.scenes.update(dt); },
+  // Auf Titelbild und im Tutorial steht das Spiel still.
+  update(dt) { if (playing) ctx.game.tick(dt); ctx.scenes.update(dt); },
   render() { hud.render(); ctx.scenes.render(); },
-  onAway(seconds) { ctx.game.away(seconds); },
+  onAway(seconds) { if (playing) ctx.game.away(seconds); },
 });
 
 // ---------- Speichern ----------

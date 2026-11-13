@@ -125,6 +125,26 @@ test('Loop: feste Schritte, Rest wird mitgenommen', () => {
   assert.equal(steps.length, 5);
 });
 
+test('Loop: Ersatz-Takt springt ein, wenn keine Bild-Takte kommen, aber nicht bei verstecktem Tab', () => {
+  let clock = 0, hidden = false, updates = 0, timerFn = null, cleared = false;
+  const loop = createLoop({
+    step: 0.1, update: () => updates++, now: () => clock, isHidden: () => hidden,
+    raf: () => 1, cancel: () => {},           // der Browser liefert nie einen Bild-Takt
+    every: fn => { timerFn = fn; return 7; }, clearEvery: id => { cleared = id === 7; },
+  });
+  loop.start();
+  clock = 100; timerFn();                     // zu früh für den Ersatz-Takt
+  assert.equal(updates, 0);
+  clock = 300; timerFn();
+  assert.equal(updates, 3);
+  hidden = true; clock = 900; timerFn();      // versteckt: nichts rechnen
+  assert.equal(updates, 3);
+  loop.stop();
+  assert.equal(cleared, true);
+  clock = 2000; timerFn();
+  assert.equal(updates, 3);
+});
+
 test('Loop: lange Pause wird als Abwesenheit gemeldet statt nachgerechnet', () => {
   let updates = 0, away = 0;
   const loop = createLoop({ step: 0.1, awayAfter: 2, update: () => updates++, onAway: s => { away += s; } });
