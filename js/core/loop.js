@@ -22,7 +22,8 @@ export function createLoop({
     if (delta > awayAfter) { onAway?.(delta); render?.(); return 0; }
     acc += delta;
     let steps = 0;
-    while (acc >= step) { update(step); acc -= step; steps++; }
+    // Kleine Toleranz, damit Gleitkomma-Reste (0,0999…) keinen Schritt verschlucken.
+    while (acc >= step - 1e-9) { update(step); acc = Math.max(0, acc - step); steps++; }
     if (steps > 0) render?.();
     return steps;
   }
