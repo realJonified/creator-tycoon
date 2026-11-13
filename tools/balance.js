@@ -114,7 +114,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
   const S = newState(0);
   const first = simulate({ state: S, stopAtPrestige: true, seconds: 6 * 3600 });
   if (first.prestigeAt) {
-    const gain = doPrestige(S);
+    const gain = doPrestige(S, mulberry32(SEED)); // fester Zufall, damit das Ergebnis immer gleich ist
     spendFame(S);
     const second = simulate({ state: S, stopAtPrestige: true, seconds: 6 * 3600, seed: SEED + 1 });
     console.log(`\nZweiter Kanal (nach Neustart bei ${fmtTime(first.prestigeAt)} mit +${gain} Ruhm):`);
