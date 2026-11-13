@@ -2,6 +2,8 @@
 
 Ein kleines Idle-Spiel im Browser: Nimm Videos auf, verdiene Geld 💰 und sammle Abonnenten 👥.
 
+## 👉 [Jetzt spielen!](https://realjonified.github.io/creator-tycoon/)
+
 ## So spielst du
 - **Video aufnehmen** klicken bringt Geld und Abos
 - **Ausrüstung** (Kamera, Mikro, PC …) macht jedes Video wertvoller
