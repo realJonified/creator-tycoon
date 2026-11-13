@@ -37,7 +37,8 @@ export default {
         const price = cost(S, r.kind, r.item.id, n);
         const have = owned(S, r.kind, r.item.id);
         setText(r.have, r.section.have(have));
-        setText(r.btn, (n > 1 ? `${n}× · ` : '') + eur(price));
+        setText(r.count, n > 1 ? `${n} Stück` : '');
+        setText(r.price, eur(price));
         setDisabled(r.btn, S.money < price);
         r.btn.setAttribute('aria-label', `${r.item.name} kaufen, ${n} Stück für ${eur(price)}`);
         // Noch weit entfernte Dinge werden blasser gezeigt.
@@ -66,7 +67,8 @@ export default {
               h('div', { class: 'item-info' },
                 h('div', { class: 'item-name' }, item.name, ' ', r.have = h('span', { class: 'sub' })),
                 h('div', { class: 'muted small' }, section.desc(item))),
-              r.btn = h('button', { type: 'button', class: 'btn buy', onclick: () => onBuy(section.kind, item.id) }),
+              r.btn = h('button', { type: 'button', class: 'btn buy', onclick: () => onBuy(section.kind, item.id) },
+                r.count = h('small'), r.price = h('span')),
             );
             rows.push(r);
             list.append(r.row);

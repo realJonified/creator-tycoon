@@ -42,9 +42,9 @@ p { margin: 0 0 10px; }
 .hud { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
 .brand { grid-column: 1 / -1; font-size: 1.25rem; font-weight: 700; }
 .brand span { color: var(--accent); }
-.stat { background: var(--card); border-radius: var(--radius); padding: 10px 14px; box-shadow: var(--shadow); min-width: 0; }
+.stat { background: var(--card); border-radius: var(--radius); padding: 10px 12px; box-shadow: var(--shadow); min-width: 0; }
 .stat .label { display: block; color: var(--muted); font-size: .8rem; }
-.stat .val { display: block; font-size: 1.45rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat .val { display: block; font-size: clamp(1.05rem, 4.9vw, 1.45rem); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .stat .rate { display: block; color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .stat.money .val { color: var(--money); }
 .stat.subs .val { color: var(--subs); }
@@ -95,6 +95,9 @@ p { margin: 0 0 10px; }
 .btn:active:not(:disabled) { transform: scale(.97); }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .btn.buy { background: var(--money); border-color: var(--money); color: #fff; min-width: 104px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.btn.buy { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; flex: none; }
+.btn.buy small { font-size: .7rem; font-weight: 600; opacity: .9; }
+.btn.buy small:empty { display: none; }
 .btn.gold { background: var(--gold-bg); border-color: var(--gold-bg); color: var(--gold-ink); }
 .btn.danger { color: var(--danger); border-color: var(--danger); }
 .btn.big { font-size: 1.1rem; padding: 14px 22px; }
