@@ -1,0 +1,72 @@
+/* Stile der einzelnen Szenen. */
+
+/* ---------- Studio ---------- */
+@media (min-width: 760px) {
+  .scene-studio { display: grid; grid-template-columns: 1.1fr 1fr; align-items: start; }
+}
+.record-area { position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 8px 0 0; }
+.rec-btn {
+  width: 172px; height: 172px; border-radius: 50%; border: none; cursor: pointer; color: #fff; font-size: 1.05rem; font-weight: 700;
+  background: radial-gradient(circle at 35% 30%, var(--accent2), #d92f47); box-shadow: 0 8px 24px rgba(217, 47, 71, .4);
+  transition: transform .06s; user-select: none; -webkit-user-select: none; text-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+}
+.rec-btn:active { transform: scale(.94); }
+.rec-icon { font-size: 2.6rem; display: block; }
+.float { position: absolute; pointer-events: none; font-weight: 700; white-space: nowrap; animation: floatUp .9s ease-out forwards; }
+.float.money { color: var(--money); }
+.float.subs { color: var(--subs); }
+@keyframes floatUp { to { transform: translateY(-70px); opacity: 0; } }
+
+.buffs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; min-height: 30px; }
+.buff { background: var(--gold-bg); color: var(--gold-ink); border-radius: 99px; padding: 4px 10px; font-size: .82rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.goal { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: center; padding: 10px 0; }
+.goal + .goal { border-top: 1px solid var(--line); }
+.goal-icon { font-size: 1.4rem; grid-column: 1; grid-row: 1 / span 2; }
+.goal > div:nth-child(2) { grid-column: 2; grid-row: 1; min-width: 0; }
+.goal .bar { grid-column: 2; grid-row: 2; margin-top: 0; }
+.goal .btn { grid-column: 3; grid-row: 1 / span 2; min-width: 96px; padding: 8px 10px; white-space: nowrap; }
+.goal.claimed { opacity: .55; }
+
+/* ---------- Awards ---------- */
+.shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.award { background: var(--card); border: 2px solid transparent; border-radius: var(--radius); padding: 14px 10px; text-align: center; box-shadow: var(--shadow); }
+.award-icon { font-size: 2.2rem; filter: grayscale(1); opacity: .45; }
+.award-name { font-weight: 700; }
+.award-state { color: var(--muted); margin-top: 4px; }
+.award.got { border-color: var(--gold-bg); }
+.award.got .award-icon { filter: none; opacity: 1; }
+.award.got .award-state { color: var(--money); font-weight: 700; }
+
+/* ---------- Titel und Tutorial ---------- */
+body.no-nav #app { padding-bottom: 12px; }
+.scene-titel, .scene-tutorial { min-height: calc(100vh - 24px); min-height: calc(100dvh - 24px); justify-content: center; align-items: center; text-align: center; }
+.title-logo { font-size: 4.5rem; line-height: 1; animation: pop .5s ease; }
+.title-name { font-size: 2.2rem; font-weight: 800; margin: 0; }
+.title-name span { color: var(--accent); }
+.title-actions { display: flex; flex-direction: column; gap: 10px; width: min(320px, 100%); }
+.title-card { width: min(420px, 100%); text-align: left; }
+.title-card .gain { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+@keyframes pop { from { transform: scale(.6); opacity: 0; } }
+.tut-card { width: min(440px, 100%); }
+.tut-icon { font-size: 3.4rem; line-height: 1.1; }
+.tut-dots { display: flex; gap: 6px; justify-content: center; margin: 12px 0; }
+.tut-dots span { width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
+.tut-dots span.on { background: var(--accent); }
+
+/* ---------- Karriere ---------- */
+.fame { font-size: 1.6rem; font-weight: 800; color: var(--gold); font-variant-numeric: tabular-nums; }
+.statgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin: 0; }
+.statgrid dt { color: var(--muted); font-size: .82rem; }
+.statgrid dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+.btn.perk { min-width: 72px; white-space: nowrap; }
+.item-name .sub { white-space: nowrap; }
+
+/* ---------- Overlays ---------- */
+.event-icon { font-size: 3rem; line-height: 1; text-align: center; }
+.overlay-ereignis h2, .overlay-bestaetigen h2 { text-align: center; margin: 8px 0; }
+.choice { text-align: left; display: flex; flex-direction: column; gap: 2px; }
+.choice small { font-weight: 500; opacity: .85; }
+.result-lines { list-style: none; padding: 0; margin: 10px 0 0; text-align: center; font-weight: 700; }
+.overlay-viral { width: auto; padding: 14px 22px; background: var(--gold-bg); color: var(--gold-ink); text-align: center; font-weight: 800; font-size: 1.15rem; animation: pop .35s ease; }
+.overlay-viral small { display: block; font-weight: 600; font-size: .85rem; }
