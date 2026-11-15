@@ -5,7 +5,9 @@ import { resolve } from '../core/physics.js';
 const WALK = 6, RUN = 10, RADIUS = 0.45;
 
 function part(w, h, d, color, x, y, z, parent) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({ color }));
+  const mat = new THREE.MeshLambertMaterial({ color });
+  mat.userData.noDetail = true; // bei Grafik "Hoch" ohne Oberflächenstruktur
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
   m.position.set(x, y, z); m.castShadow = true;
   parent.add(m);
   return m;

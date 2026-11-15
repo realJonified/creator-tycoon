@@ -1,9 +1,9 @@
 // Map 2 "Wolkenlagune": Ringinsel um eine Lagune.
 // Ebenen (Zonen): Boden (Ring), Wolkeninsel in 16 m Höhe (Sprungpad), Lagunengrund in 7 m Tiefe (Tauchsteg).
 import * as THREE from '../../../vendor/three.module.min.js';
-import { Builder, matrix, LAMBERT, textSprite } from '../build.js';
+import { Builder, matrix, LAMBERT, textSprite, grassTufts } from '../build.js';
 import { buildHouse, rotY } from '../world.js';
-import { disposeObject } from '../dispose.js';
+import { disposeObject, forgetIn } from '../dispose.js';
 
 const C = { grass: '#86d16a', grass2: '#73c25a', sand: '#f6e2a8', sand2: '#eccf86', rock: '#8d99a6', water: '#3cc3d8', deep: '#1e88a8', wood: '#a0673f' };
 
@@ -50,8 +50,10 @@ export function buildLagune(engine, S, map) {
   // Wasseroberflächen: Meer aussen, Lagune durchsichtig (Kuppel von oben sichtbar)
   const sea = new THREE.Mesh(new THREE.CircleGeometry(700, 48), new THREE.MeshLambertMaterial({ color: C.water }));
   sea.rotation.x = -Math.PI / 2; sea.position.y = -0.35;
+  sea.material.userData.water = true;
   group.add(sea);
   const lagoonMat = new THREE.MeshLambertMaterial({ color: '#4fd1e0', transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false });
+  lagoonMat.userData.water = true;
   const lagoon = new THREE.Mesh(new THREE.CircleGeometry(LR, 48), lagoonMat);
   lagoon.rotation.x = -Math.PI / 2; lagoon.position.y = -0.3; lagoon.renderOrder = 2;
   group.add(lagoon);
@@ -92,12 +94,12 @@ export function buildLagune(engine, S, map) {
 
   // ---------- Häuser ----------
   const zoneY = z => (z === 'sky' ? SKY.y : z === 'under' ? UNDER.y : 0);
-  const skyB = new Builder(), underB = new Builder();
+  const skyB = new Builder(), underB = new Builder(), fine = new Builder(); // fine = Hausdetails für "Hoch"
   map.houses.forEach((h, i) => {
     const zone = h.zone || 'ground';
     const into = zone === 'sky' ? skyB : zone === 'under' ? underB : p;
     // Auf der Wolkeninsel ist wenig Platz: dort ein kleineres Modell
-    const size = buildHouse(into, h, zone === 'sky' ? 1 : Math.min(8, 3 + i), h.x, h.z, h.rot);
+    const size = buildHouse(into, h, zone === 'sky' ? 1 : Math.min(8, 3 + i), h.x, h.z, h.rot, zone === 'ground' ? fine : null);
     const cols = zone === 'sky' ? skyCols : zone === 'under' ? underCols : ground;
     if (h.kind === 'kuppel') cols.circles.push({ x: h.x, z: h.z, r: 6.2 });
     else cols.boxes.push({ x: h.x, z: h.z, hw: size.w / 2 + 0.3, hd: size.d / 2 + 0.3, rot: h.rot });
@@ -121,6 +123,16 @@ export function buildLagune(engine, S, map) {
   const skyMesh = skyB.mesh(); skyMesh.position.y = SKY.y; skyMesh.updateMatrix();
   const underMesh = underB.mesh(); underMesh.position.y = UNDER.y; underMesh.updateMatrix();
   group.add(p.mesh(), skyMesh, underMesh);
+  const fineMesh = fine.mesh(); fineMesh.visible = false;
+  group.add(fineMesh); engine.hiDetails.push(fineMesh);
+  const tuftPts = [], rg = rng(78);
+  for (let n = 0; tuftPts.length < 1800 && n < 30000; n++) {
+    const a = rg() * Math.PI * 2, d = LR + 5 + rg() * (OR - LR - 12), x = Math.cos(a) * d, z = Math.sin(a) * d;
+    if (map.houses.some(h => !h.zone && Math.hypot(x - h.x, z - h.z) < 9) || Math.abs(d - LR - 10.5) < 2 || Math.abs(x) < 2.5 && z > LR) continue;
+    tuftPts.push({ x, z, s: 0.7 + rg() * 0.8, r: rg() * 6 });
+  }
+  const tufts = grassTufts(tuftPts); tufts.visible = false;
+  group.add(tufts); engine.hiDetails.push(tufts);
 
   // ---------- Palmen und Steine (Instanzen) ----------
   const palms = [], rp = rng(13);
@@ -194,6 +206,6 @@ export function buildLagune(engine, S, map) {
       }
       bubbleGeo.attributes.position.needsUpdate = true;
     },
-    dispose() { const i = details.indexOf(clouds); if (i >= 0) details.splice(i, 1); return disposeObject(group); },
+    dispose() { forgetIn(engine, group); return disposeObject(group); },
   };
 }

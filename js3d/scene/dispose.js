@@ -6,7 +6,8 @@ export function disposeObject(root) {
   const geos = new Set(), mats = new Set(), texs = new Set();
   root.traverse(o => {
     if (o.geometry) geos.add(o.geometry);
-    const list = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+    const list = Array.isArray(o.material) ? [...o.material] : o.material ? [o.material] : []; // Kopie, damit push nichts verändert
+    if (o.userData?.lowMat) list.push(o.userData.lowMat); // Original bei Grafik "Hoch" (siehe hiquality.js)
     for (const m of list) {
       if (m.userData?.shared) continue;
       mats.add(m);
@@ -20,4 +21,13 @@ export function disposeObject(root) {
   for (const m of mats) m.dispose();
   root.removeFromParent?.();
   return { geometries: geos.size, materials: mats.size, textures: texs.size };
+}
+
+// Entfernt alle Einträge einer Gruppe aus den Detail-Listen der Engine (details, hiDetails).
+export function forgetIn(engine, group) {
+  const inside = o => { for (let p = o; p; p = p.parent) if (p === group) return true; return false; };
+  for (const list of [engine.details, engine.hiDetails]) {
+    if (!list) continue;
+    for (let i = list.length - 1; i >= 0; i--) if (inside(list[i])) list.splice(i, 1);
+  }
 }

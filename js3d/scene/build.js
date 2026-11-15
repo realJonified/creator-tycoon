@@ -93,3 +93,20 @@ export function textSprite(lines, { width = 512, height = 192, bg = '#1f2937', f
   sprite.update(lines);
   return sprite;
 }
+
+// Grasbüschel als EIN InstancedMesh (nur bei Grafik "Hoch" sichtbar). points = [{ x, z, s, r }].
+export function grassTufts(points) {
+  const b = new Builder();
+  for (let k = 0; k < 3; k++) b.add(new THREE.ConeGeometry(0.06, 0.55, 3), '#ffffff', matrix(Math.cos(k * 2.1) * 0.12, 0.27, Math.sin(k * 2.1) * 0.12, k, Math.cos(k * 2.1) * 0.25, 0, 1, 1, 1));
+  const geo = b.geometry(); geo.deleteAttribute('color');
+  const mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: '#ffffff' }), Math.max(1, points.length));
+  const o = new THREE.Object3D(), c = new THREE.Color();
+  const greens = ['#5aa83f', '#6cbf4a', '#4e9a38', '#7ccf55'];
+  points.forEach((p, i) => {
+    o.position.set(p.x, 0, p.z); o.rotation.set(0, p.r, 0); o.scale.setScalar(p.s); o.updateMatrix();
+    mesh.setMatrixAt(i, o.matrix); mesh.setColorAt(i, c.set(greens[i % greens.length]));
+  });
+  mesh.instanceMatrix.needsUpdate = true; if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}

@@ -2,8 +2,8 @@
 // Strand mit Häusern im Westen, weitere Häuser verteilt. Statische Teile sind zusammengefügt,
 // gleiche Objekte (Bäume, Palmen, Laternen, Blumen, Steine) sind Instanzen.
 import * as THREE from '../../vendor/three.module.min.js';
-import { Builder, matrix, LAMBERT, textSprite } from './build.js';
-import { disposeObject } from './dispose.js';
+import { Builder, matrix, LAMBERT, textSprite, grassTufts } from './build.js';
+import { disposeObject, forgetIn } from './dispose.js';
 
 export const ISLAND_R = 82;
 export const WALK_R = 78.5;
@@ -24,13 +24,15 @@ function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>>
 export function houseSize(i) { return { w: 8 + Math.min(i, 8) * 0.9, d: 7 + Math.min(i, 8) * 0.7 }; }
 
 // Baut ein Haus (Tür zeigt nach lokal +z) in den Builder b, verschoben nach (x, z) und gedreht.
-export function buildHouse(b, h, i, x, z, rot) {
+// fine = optionaler zweiter Builder für Details, die nur bei Grafik "Hoch" sichtbar sind.
+export function buildHouse(b, h, i, x, z, rot, fine = null) {
   if (h.kind === 'kuppel') return buildDome(b, h, x, z, rot);
   const { w, d } = houseSize(i);
   const fh = 3, H = h.floors * fh;
   const M = (lx, ly, lz, ry = 0, sx = 1, sy = 1, sz = 1) => { const p = rotY(lx, lz, rot); return matrix(x + p.x, ly, z + p.z, rot + ry, 0, 0, sx, sy, sz); };
   const BOX = new THREE.BoxGeometry(1, 1, 1);
   const box = (lw, lh, ld, lx, ly, lz, color) => b.add(BOX, color, M(lx, ly + lh / 2, lz, 0, lw, lh, ld));
+  const fbox = (lw, lh, ld, lx, ly, lz, color) => fine.add(BOX, color, M(lx, ly + lh / 2, lz, 0, lw, lh, ld));
   const win = '#2b4a6f', frame = '#ffffff';
   // Sockel und Weg zur Tür
   box(w + 0.6, 0.3, d + 0.6, 0, 0, 0, '#a8a29e');
@@ -66,6 +68,12 @@ export function buildHouse(b, h, i, x, z, rot) {
       const lx = -w / 2 + (c + 0.5) * (w / cols);
       if (f === 0 && Math.abs(lx) < 1.2) continue;
       box(1.15, 1.2, 0.12, lx, y, d / 2 + 0.02, frame); box(0.9, 0.95, 0.14, lx, y + 0.12, d / 2 + 0.04, win);
+      if (fine) { // Fensterbank mit Blumenkasten, Fensterläden
+        fbox(1.35, 0.08, 0.3, lx, y - 0.06, d / 2 + 0.14, '#e5e7eb');
+        fbox(1.0, 0.22, 0.22, lx, y + 0.02, d / 2 + 0.2, '#8b5a34');
+        for (const k of [-0.32, 0, 0.32]) fine.add(new THREE.IcosahedronGeometry(0.11, 0), k ? '#f472b6' : '#fde047', M(lx + k, y + 0.3, d / 2 + 0.2));
+        for (const sx of [-1, 1]) fbox(0.32, 1.15, 0.06, lx + sx * 0.75, y + 0.03, d / 2 + 0.08, h.roof);
+      }
       box(1.15, 1.2, 0.12, lx, y, -d / 2 - 0.02, frame); box(0.9, 0.95, 0.14, lx, y + 0.12, -d / 2 - 0.04, win);
     }
     for (const sx of [-1, 1]) {
@@ -74,6 +82,15 @@ export function buildHouse(b, h, i, x, z, rot) {
   }
   box(1.5, 2.3, 0.2, 0, 0.3, d / 2 + 0.05, '#6b4226');
   box(0.16, 0.16, 0.08, 0.45, 1.5, d / 2 + 0.18, '#facc15');
+  if (fine) { // Vordach mit Lampe, Türrahmen, Eckleisten, Fussmatte
+    fbox(2.2, 0.12, 1.1, 0, 2.85, d / 2 + 0.55, h.roof);
+    for (const sx of [-0.95, 0.95]) fbox(0.1, 2.5, 0.1, sx, 0.3, d / 2 + 1.0, '#f8fafc');
+    fbox(0.22, 0.3, 0.22, 0.95, 2.35, d / 2 + 0.25, '#fff3b0');
+    fbox(1.7, 2.45, 0.08, 0, 0.3, d / 2 + 0.02, '#f8fafc');
+    fbox(1.2, 0.03, 0.7, 0, 0.3, d / 2 + 0.6, '#9a3412');
+    for (const [cx, cz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) fbox(0.22, H, 0.22, cx * w / 2, 0.3, cz * d / 2, '#f8fafc');
+    fbox(w + 0.5, 0.18, 0.18, 0, 0.3 + H - 0.05, d / 2 + 0.12, '#94a3b8'); // Dachrinne
+  }
   // Briefkasten und Büsche
   box(0.35, 1.1, 0.35, 1.8, 0, d / 2 + 2.6, '#334155'); box(0.6, 0.45, 0.4, 1.8, 1.1, d / 2 + 2.6, '#ef4444');
   for (const sx of [-1, 1]) { const p = rotY(sx * (w / 2 - 0.6), d / 2 + 1, rot); b.add(new THREE.IcosahedronGeometry(0.75, 0), '#4f9d3a', matrix(x + p.x, 0.6, z + p.z)); }
@@ -140,6 +157,7 @@ export function buildBucht(engine, S, map) {
   group.add(groundMesh);
 
   const water = new THREE.Mesh(new THREE.CircleGeometry(700, 48), new THREE.MeshLambertMaterial({ color: C.water }));
+  water.material.userData.water = true; // bei Grafik "Hoch": spiegelnd mit Wellen
   water.rotation.x = -Math.PI / 2; water.position.y = -0.35; water.receiveShadow = false;
   group.add(water);
   const foam = new THREE.Mesh(new THREE.RingGeometry(ISLAND_R + 2.6, ISLAND_R + 4.2, 64), new THREE.MeshBasicMaterial({ color: '#e8fbff', transparent: true, opacity: 0.55 }));
@@ -179,8 +197,9 @@ export function buildBucht(engine, S, map) {
 
   // ---------- Häuser ----------
   const houseSigns = [];
+  const fine = new Builder(); // Hausdetails für Grafik "Hoch"
   HOUSES.forEach((h, i) => {
-    const size = buildHouse(props, h, i, h.x, h.z, h.rot);
+    const size = buildHouse(props, h, i, h.x, h.z, h.rot, fine);
     colliders.boxes.push({ x: h.x, z: h.z, hw: size.w / 2 + 0.3, hd: size.d / 2 + 0.3, rot: h.rot });
     const door = rotY(0, size.d / 2 + 2.2, h.rot);
     const sign = textSprite(['', ''], { scale: 4.4 });
@@ -192,6 +211,8 @@ export function buildBucht(engine, S, map) {
   });
   const propsMesh = props.mesh();
   group.add(propsMesh);
+  const fineMesh = fine.mesh(); fineMesh.visible = false;
+  group.add(fineMesh); engine.hiDetails.push(fineMesh);
 
   const shopSign = textSprite(['BITBAZAR', 'Technik & PC-Teile'], { scale: 7, bg: '#e5384f', accent: '#ffffff' });
   shopSign.position.set(sx - 4.3, 8.2, sz);
@@ -284,6 +305,15 @@ export function buildBucht(engine, S, map) {
   const fl = inst(new THREE.IcosahedronGeometry(0.22, 0), new THREE.MeshLambertMaterial({ color: '#ffffff' }), flowers, (o, f) => o.position.set(f.x, 0.25, f.z), { cast: false });
   flowers.forEach((f, i) => fl.setColorAt(i, new THREE.Color(f.c))); fl.instanceColor.needsUpdate = true;
   group.add(fl); details.push(fl);
+  // Grasbüschel (nur Hoch)
+  const tuftPts = [], rg = rng(77);
+  for (let n = 0; tuftPts.length < 2200 && n < 30000; n++) {
+    const x = (rg() * 2 - 1) * 74, z = (rg() * 2 - 1) * 74;
+    if (blocked(x, z)) continue;
+    tuftPts.push({ x, z, s: 0.7 + rg() * 0.8, r: rg() * 6 });
+  }
+  const tufts = grassTufts(tuftPts); tufts.visible = false;
+  group.add(tufts); engine.hiDetails.push(tufts);
 
   const clouds = new Builder();
   const rc = rng(5);
@@ -326,7 +356,7 @@ export function buildBucht(engine, S, map) {
     group, colliders, triggers, houseSigns, cloudMesh,
     zones: { ground: { y: 0, bounds: { x: 0, z: 0, r: map.walkRadius }, colliders } },
     update(t) { cloudMesh.rotation.y = t * 0.004; },
-    dispose() { for (const d of [fl, cloudMesh, farMesh]) { const i = details.indexOf(d); if (i >= 0) details.splice(i, 1); } return disposeObject(group); },
+    dispose() { forgetIn(engine, group); return disposeObject(group); },
     updatePortal(t, open, text) {
       portalMat.uniforms.time.value = t;
       portalMat.uniforms.open.value += ((open ? 1 : 0) - portalMat.uniforms.open.value) * 0.05;

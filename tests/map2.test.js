@@ -12,7 +12,7 @@ import { newState, unlockMap, buyHouse, nextHouse, houseMult } from '../js3d/cor
 const ctx2d = new Proxy({}, { get: (t, k) => (k in t ? t[k] : () => {}), set: (t, k, v) => { t[k] = v; return true; } });
 globalThis.document ??= { createElement: () => ({ width: 0, height: 0, getContext: () => ctx2d }) };
 
-const fakeEngine = () => ({ scene: new THREE.Scene(), details: [] });
+const fakeEngine = () => ({ scene: new THREE.Scene(), details: [], hiDetails: [] });
 const lagune = findMap('lagune');
 
 test('Map 2: 1 Billion, mehr Häuser als Map 1, darunter Luft- und Unterwasserhaus, Preise steigen weiter', () => {
@@ -55,6 +55,7 @@ test('Jede Map lässt sich in Node bauen und vollständig entsorgen', () => {
     assert.ok(freed.geometries > 0 && freed.materials > 0, `${m.id} gibt Ressourcen frei`);
     assert.equal(engine.scene.children.includes(world.group), false, `${m.id} ist aus der Szene entfernt`);
     assert.equal(engine.details.length, 0, `${m.id} hinterlässt keine Detail-Objekte`);
+    assert.equal(engine.hiDetails.length, 0, `${m.id} hinterlässt keine Hoch-Details`);
   }
 });
 
@@ -84,6 +85,7 @@ test('Map-Wechsel mit echten Bau-Funktionen: nach 10 Wechseln hängt genau eine 
   assert.equal(engine.scene.children.length, 1);
   assert.equal(mgr.id, 'bucht');
   assert.equal(engine.details.length, 3, 'nur die Details von Map 1 (Blumen, Wolken, Horizont)');
+  assert.equal(engine.hiDetails.length, 2, 'nur die Hoch-Details von Map 1 (Hausdetails, Gras)');
 });
 
 test('Map 3 ist als Gerüst angelegt', () => {

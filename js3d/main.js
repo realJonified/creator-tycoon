@@ -63,7 +63,7 @@ const maps = createMapManager({
     w.npcs = createNpcs(engine, m, () => S.stats.seconds / 3600, w.group);
     return w;
   },
-  dispose: inst => { inst.npcs?.dispose(); inst.dispose(); },
+  dispose: inst => { engine.forget(inst.group); inst.npcs?.dispose(); inst.dispose(); },
   async onLoading(on, id) {
     const el = $('loading');
     if (on) {
@@ -84,6 +84,7 @@ async function travel(id, at = null) {
   world = await maps.load(id);
   mapData = m;
   S.map = id;
+  engine.refreshQuality();
   updateSigns();
   enterWorld(at || m.spawn);
   if (prev === 'start') mode = 'start';
@@ -173,6 +174,7 @@ function enterHouse(id, keepPos = false) {
   showWorld(false); arena.group.visible = false;
   engine.setUnderwater(false); engine.setSky(mapData.sky.top, mapData.sky.bottom, mapData.sky);
   interior = buildInterior(engine, S, houseIndex(id));
+  engine.refreshQuality();
   S.home = id;
   mode = 'interior';
   const sp = keep || interior.spawn;
@@ -377,6 +379,7 @@ function frame(now, fallback = false) {
       $('start').hidden = true;
       mode = 'world';
       hud.show(true);
+      if (S.settings.graphics === 'auto' && !S.tutorialDone) hud.toast(`🎨 Grafik automatisch auf „${engine.level[0].toUpperCase() + engine.level.slice(1)}“ gestellt. Ändern: Menü → Einstellungen.`);
       if (S.migratedRefund) {
         hud.toast(`🏡 Update 2: Häuser ab Nr. 6 stehen nicht mehr auf der Insel. Du hast ${eur(S.migratedRefund)} zurückbekommen.`);
         delete S.migratedRefund;

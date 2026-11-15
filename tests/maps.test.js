@@ -173,3 +173,13 @@ test('disposeObject gibt Geometrien, Materialien und Texturen frei, geteilte Mat
   assert.deepEqual(res, { geometries: 3 + 1, materials: 4, textures: 3 }); // + Sprite-Geometrie von three.js
   assert.equal(root.parent, null, 'aus der Szene entfernt');
 });
+
+test('disposeObject gibt bei Grafik "Hoch" auch das ursprüngliche Material frei', () => {
+  const low = new THREE.MeshLambertMaterial(), high = new THREE.MeshStandardMaterial();
+  let freed = 0; low.addEventListener('dispose', () => freed++); high.addEventListener('dispose', () => freed++);
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(), high);
+  mesh.userData.lowMat = low;
+  const g = new THREE.Group(); g.add(mesh);
+  disposeObject(g);
+  assert.equal(freed, 2);
+});

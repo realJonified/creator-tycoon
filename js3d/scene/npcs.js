@@ -32,7 +32,9 @@ export function createNpcs(engine, map, getHours, parent = engine.scene) {
   // ---------- Körper (Instanzen) ----------
   const box = new THREE.BoxGeometry(1, 1, 1);
   const meshes = PARTS.map(() => {
-    const m = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ color: '#ffffff' }), count);
+    const mat = new THREE.MeshLambertMaterial({ color: '#ffffff' });
+    mat.userData.noDetail = true;
+    const m = new THREE.InstancedMesh(box, mat, count);
     m.castShadow = true; m.frustumCulled = false;
     group.add(m);
     return m;

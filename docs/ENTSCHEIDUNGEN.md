@@ -36,6 +36,31 @@ Eine Zeile pro Annahme, die ich ohne Rückfrage getroffen habe.
 - Reden: In der Nähe (unter 3,2 m) erscheint „Mit … reden“ (E oder Knopf). Der NPC bleibt 3,5 s stehen, dreht sich zum Spieler, winkt und sagt einen von 10 Sätzen in einer Sprechblase. Es gibt nur eine Sprechblase pro Map.
 - Draw-Calls mit NPCs: Map 1 etwa 52, Map 2 etwa 53 (vorher 39 bzw. 44).
 
+### Etappe 4: Grafikstufe „Hoch“
+- Niedrig und Mittel sind unverändert wie in Version 1 (Lambert-Materialien, kein Tonemapping, keine Nachbearbeitung). „Hoch“ schaltet zur Laufzeit um, ohne die Map neu zu laden:
+  - Materialien: Lambert wird zu MeshStandard (Rauigkeit 0,86, Wasser 0,08). Beim Zurückschalten kommen die Originale wieder (`userData.lowMat`). Geteilte Materialien bleiben geteilt (Cache).
+  - Per Code erzeugte Oberflächen: eine 128 × 128-Rauschtextur, aufgetragen über die Weltposition (die zusammengefügten Meshes haben keine Texturkoordinaten). Böden werden fleckig (Gras, Sand), Wände bekommen Putzkorn, braune Flächen Holzmaserung. Figuren (Spieler, NPCs) bleiben glatt, sonst bekam die Haut Maserung.
+  - Licht: Umgebungslicht aus einer per PMREM gerenderten Himmelskugel. Es wird nur neu berechnet, wenn sich die Himmelsfarben ändern (nicht jedes Bild beim Tauchen). Sonne 3,4, Himmelslicht 0,9.
+  - Weiche Schatten per VSM (Radius 6, 2048 px). Niedrig/Mittel bleiben bei PCF.
+  - Wasser: glatt und spiegelnd, mit wandernden Wellen in der Normalen.
+  - Nachbearbeitung (eigene kleine Pipeline, ohne three.js-Zusatzmodule): HDR-Bild mit 4× MSAA, Umgebungsverdeckung aus der Tiefe (10 Proben, halbe Auflösung, weichgezeichnet), leichtes Bloom (halbe Auflösung), Neutral-Tonemapping. ACES wirkte zu blass, Neutral hält die Farben kräftig.
+  - Mehr Details, nur in Hoch sichtbar: Fensterbänke mit Blumenkästen, Fensterläden, Eckleisten, Vordach mit Lampe, Dachrinne und rund 2.000 Grasbüschel pro Map (je ein Mesh). Sie werden immer mitgebaut, kosten in Niedrig/Mittel aber keinen Draw-Call.
+- Vorschlag beim ersten Start („Automatisch“): Handy Niedrig, PC mit mindestens 4 Kernen und MSAA-fähiger Grafik Hoch, sonst Mittel. Beim ersten Spielen erscheint ein Hinweis, auf welche Stufe gestellt wurde.
+- Automatische Herabstufung (`js3d/core/quality.js`): Hoch → Mittel unter 50 FPS, Mittel → Niedrig unter 45 FPS (PC) bzw. 28 FPS (Handy), jeweils gemittelt über 3 Sekunden. Hochgeschaltet wird nie automatisch. Im Spiel geprüft: Bei vorgespielten 20 FPS ging es nach 5,6 s auf Mittel und nach 10,6 s auf Niedrig.
+- Die Debug-Anzeige zählt Draw-Calls und Dreiecke jetzt über alle Durchgänge eines Bildes (Schatten, Szene, Nachbearbeitung).
+- **Messung** (Renderzeit pro Bild mit Warten auf die GPU, `kanalbucht.engine.benchmark()`, 1280 × 800, Pixel-Ratio 1, NVIDIA RTX 5080):
+
+  | Map | Stufe | ms/Bild | mögliche FPS | Draw-Calls | Dreiecke |
+  |---|---|---|---|---|---|
+  | Kanalbucht | Niedrig | 0,98 | ~1.020 | 48 | 15.800 |
+  | Kanalbucht | Mittel | 1,36 | ~730 | 86 | 38.900 |
+  | Kanalbucht | Hoch | 3,39 | ~300 | 100 | 127.500 |
+  | Wolkenlagune | Niedrig | 0,58 | ~1.730 | 43 | 13.400 |
+  | Wolkenlagune | Mittel | 0,77 | ~1.300 | 76 | 28.200 |
+  | Wolkenlagune | Hoch | 1,34 | ~740 | 90 | 107.800 |
+
+  Die Grafikkarte ist sehr stark, die absoluten Zahlen sagen über normale PCs und Handys wenig. Aussagekräftig ist das Verhältnis: Hoch kostet auf Map 1 etwa 2,5-mal so viel wie Mittel und 3,5-mal so viel wie Niedrig. Die im Test-Browser angezeigten FPS (10–50) kommen vom Hintergrundfenster und sind nicht verwertbar. Auf einem echten Handy und einem normalen PC habe ich nicht gemessen.
+
 ## 3D-Welt „Kanalbucht“ (Branch welt-v1)
 - Der Branch `welt-v1` baut auf `ausbau` (Vlogvilla) auf, weil das der neueste Stand war. „Klassik“ ist deshalb Vlogvilla, nicht die allererste Version.
 - Die 3D-Welt liegt auf `index.html`, das 2D-Spiel auf `klassik.html`. Beide verlinken sich gegenseitig (Startbild und Menü).
