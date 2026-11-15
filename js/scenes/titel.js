@@ -50,6 +50,7 @@ export default {
             h('div', { class: 'title-actions' },
               h('button', { class: 'btn play big', type: 'button', onclick: start, 'data-autofocus': true }, ctx.hasSave ? '▶ WEITER' : '▶ SPIELEN'),
               ctx.hasSave && h('button', { class: 'btn', type: 'button', onclick: askNewGame }, 'Neues Spiel'),
+              h('a', { class: 'btn', href: 'index.html', style: 'text-decoration:none;text-align:center' }, '🏝️ Zur 3D-Welt Kanalbucht'),
             ),
           ),
         );

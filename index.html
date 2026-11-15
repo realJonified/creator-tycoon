@@ -2,37 +2,35 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Vlogvilla</title>
-<meta name="description" content="Vlogvilla: Mach Videos, sammle Abonnenten und zieh vom Gartenhäuschen bis ins Sternenschloss.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏡</text></svg>">
-<link rel="stylesheet" href="css/base.css">
-<link rel="stylesheet" href="css/scenes.css">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Kanalbucht</title>
+<meta name="description" content="Kanalbucht: eine 3D-Insel zum Herumlaufen. Mach Videos, kauf Häuser und besiege den Boss im Portal.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏝️</text></svg>">
+<link rel="stylesheet" href="css/welt.css">
 </head>
 <body>
-<div id="app">
-  <header class="hud" id="hud" hidden>
-    <div class="brand-row">
-      <div class="brand">🏡 Vlog<span>villa</span></div>
-      <div class="pills"><span class="pill" id="hudHouse"></span><span class="pill gems" id="hudGems">💎 0</span></div>
-    </div>
-    <div class="stat money">
-      <span class="label">💰 Geld</span>
-      <span class="val" id="hudMoney">0 €</span>
-      <span class="rate" id="hudMoneyRate">+0 €/s</span>
-    </div>
-    <div class="stat subs">
-      <span class="label">👥 Abonnenten</span>
-      <span class="val" id="hudSubs">0</span>
-      <span class="rate" id="hudSubsRate">0 Videos</span>
-    </div>
-  </header>
-  <nav class="nav" id="nav" aria-label="Hauptnavigation" hidden></nav>
-  <main id="scene"></main>
+<canvas id="c" aria-label="3D-Welt Kanalbucht"></canvas>
+
+<div id="hud" hidden>
+  <div class="hud-left">
+    <div class="pill money">💰 <b id="hMoney">0 €</b> <small id="hRate"></small></div>
+    <div class="pill subs">👥 <b id="hSubs">0</b> Abos</div>
+  </div>
+  <div class="pill portal" id="hPortal">🌀 Portal</div>
+  <button class="pill menu" id="menuBtn" type="button" aria-label="Menü">☰</button>
 </div>
-<div id="overlays"></div>
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
-<noscript><p style="padding:16px">Vlogvilla braucht JavaScript. Bitte schalte es im Browser ein.</p></noscript>
-<script type="module" src="js/main.js"></script>
+<button id="prompt" type="button" hidden></button>
+<div id="joy" aria-hidden="true"><div id="knob"></div></div>
+<div id="bossHud" hidden>
+  <div class="bar-row"><span>👾 Glitchgolem</span><div class="bar bar-boss"><i></i></div><span class="boss-hp"></span></div>
+  <div class="bar-row"><span>❤️ Du</span><div class="bar bar-me"><i></i></div><span class="me-hp"></span></div>
+</div>
+<div id="hurt" aria-hidden="true"></div>
+<div id="fps" hidden></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="panels"></div>
+<div id="start" hidden></div>
+<noscript><p style="padding:16px">Kanalbucht braucht JavaScript und WebGL.</p></noscript>
+<script type="module" src="js3d/main.js"></script>
 </body>
 </html>

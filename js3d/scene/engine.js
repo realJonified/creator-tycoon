@@ -1,0 +1,124 @@
+// Renderer, Licht, Himmel, Nebel und Grafikstufen. Misst die FPS und schaltet bei "Automatisch" herunter.
+import * as THREE from '../../vendor/three.module.min.js';
+
+export const QUALITY = {
+  niedrig: { ratio: 1,    shadows: 0,    far: 120, fogNear: 45, fogFar: 115, details: false },
+  mittel:  { ratio: 1.25, shadows: 1024, far: 180, fogNear: 70, fogFar: 170, details: true },
+  hoch:    { ratio: 1.5,  shadows: 2048, far: 260, fogNear: 95, fogFar: 240, details: true },
+};
+const ORDER = ['niedrig', 'mittel', 'hoch'];
+export const isTouch = () => matchMedia('(pointer: coarse)').matches;
+
+const SKY_TOP = new THREE.Color('#5fa8ff'), HORIZON = new THREE.Color('#ffd9b0'); // werden per setSky umgefärbt
+
+export function createEngine(canvas) {
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isTouch(), powerPreference: 'high-performance' });
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.setClearColor(HORIZON);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(HORIZON, 70, 170);
+  const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 180);
+
+  // Himmel: Kugel mit Farbverlauf (blau oben, warmer Horizont = Nachmittag).
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(500, 24, 12), new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: { top: { value: SKY_TOP }, bottom: { value: HORIZON } },
+    vertexShader: 'varying float vy; void main(){ vy = normalize(position).y; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: 'uniform vec3 top; uniform vec3 bottom; varying float vy;\nvoid main(){ float t = clamp(vy*1.6+0.08,0.0,1.0); gl_FragColor = vec4(mix(bottom, top, t),1.0);\n#include <colorspace_fragment>\n}',
+  }));
+  sky.frustumCulled = false;
+  sky.renderOrder = -1;
+  scene.add(sky);
+
+  // Sonne: warmes Nachmittagslicht von Südwesten, dazu weiches Himmelslicht.
+  const hemi = new THREE.HemisphereLight('#cfe6ff', '#6f8f4a', 1.9);
+  scene.add(hemi);
+  const sun = new THREE.DirectionalLight('#ffe0b5', 2.6);
+  const sunDir = new THREE.Vector3(-0.55, 0.62, 0.55).normalize();
+  sun.shadow.camera.left = sun.shadow.camera.bottom = -34;
+  sun.shadow.camera.right = sun.shadow.camera.top = 34;
+  sun.shadow.camera.near = 1; sun.shadow.camera.far = 140;
+  sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.04;
+  scene.add(sun, sun.target);
+  const sunDisc = new THREE.Mesh(new THREE.SphereGeometry(14, 16, 8), new THREE.MeshBasicMaterial({ color: '#fff4d6', fog: false }));
+  sunDisc.position.copy(sunDir).multiplyScalar(420);
+  scene.add(sunDisc);
+
+  const details = [];  // Objekte, die nur ab "mittel" sichtbar sind
+  let level = 'mittel', setting = 'auto', onLevel = null;
+
+  function apply(name) {
+    level = name;
+    const q = QUALITY[name];
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.ratio));
+    sun.castShadow = q.shadows > 0;
+    if (q.shadows && sun.shadow.mapSize.x !== q.shadows) {
+      sun.shadow.mapSize.set(q.shadows, q.shadows);
+      sun.shadow.map?.dispose(); sun.shadow.map = null;
+    }
+    camera.far = q.far; camera.updateProjectionMatrix();
+    scene.fog.near = q.fogNear; scene.fog.far = q.fogFar;
+    for (const d of details) d.visible = q.details;
+    resize();
+    onLevel?.(name);
+  }
+
+  function setSetting(s) {
+    setting = s;
+    apply(s === 'auto' ? (isTouch() ? 'niedrig' : 'mittel') : s);
+    samples.length = 0; warmup = 3;
+  }
+
+  function resize() {
+    const w = window.innerWidth, h = window.innerHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.fov = w < h ? 70 : 60;
+    camera.updateProjectionMatrix();
+  }
+  addEventListener('resize', resize);
+
+  // Schatten folgen dem Spieler (in Texel-Schritten, damit nichts flimmert).
+  function followShadow(target) {
+    const step = 68 / (sun.shadow.mapSize.x || 1024);
+    const x = Math.round(target.x / step) * step, z = Math.round(target.z / step) * step;
+    sun.target.position.set(x, 0, z);
+    sun.position.set(x + sunDir.x * 60, sunDir.y * 60, z + sunDir.z * 60);
+    sky.position.set(target.x, 0, target.z);
+    sunDisc.position.set(target.x + sunDir.x * 420, sunDir.y * 420, target.z + sunDir.z * 420);
+  }
+
+  // FPS-Messung und automatische Stufe (schaltet nur herunter).
+  let frames = 0, acc = 0, fps = 60, warmup = 3;
+  const samples = [];
+  function measure(dt) {
+    frames++; acc += dt;
+    if (acc < 1) return;
+    fps = frames / acc; frames = 0; acc = 0;
+    if (warmup > 0) { warmup--; return; }
+    if (setting !== 'auto' || document.hidden) return;
+    samples.push(fps);
+    if (samples.length < 3) return;
+    const avg = samples.reduce((a, b) => a + b, 0) / samples.length;
+    samples.length = 0;
+    const limit = isTouch() ? 28 : 45;
+    const i = ORDER.indexOf(level);
+    if (avg < limit && i > 0) { apply(ORDER[i - 1]); warmup = 2; }
+  }
+
+  return {
+    THREE, renderer, scene, camera, sun, details,
+    get level() { return level; }, get setting() { return setting; }, get fps() { return fps; },
+    set onLevel(fn) { onLevel = fn; },
+    setSetting, resize, followShadow, measure,
+    // Himmel und Nebel umfärben (Insel: Nachmittag, Arena: violette Dämmerung)
+    setSky(top, bottom) {
+      sky.material.uniforms.top.value.set(top); sky.material.uniforms.bottom.value.set(bottom);
+      scene.fog.color.set(bottom); renderer.setClearColor(bottom);
+      sunDisc.visible = top === '#5fa8ff';
+    },
+    render() { renderer.render(scene, camera); },
+  };
+}
