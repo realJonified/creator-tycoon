@@ -1,26 +1,9 @@
-// Kopfzeile (Geld, Abos) und Navigation. Beides ist nur in Szenen mit nav: true sichtbar.
+// Kopfzeile (Geld, Abos, Juwelen) und Navigation. Beides ist nur in Szenen mit nav: true sichtbar.
 import { h, setText } from './dom.js';
 import { fmt, eur } from '../core/format.js';
-import { moneyPerSec, subsPerSec } from '../core/formulas.js';
-import { findEvent } from '../core/events.js';
+import { moneyPerSec, currentHouse } from '../core/formulas.js';
 
-export function createHud({ hudEl, navEl, chipEl, ctx }) {
-  // Wartendes Ereignis: ein Knopf, der kurz erscheint und das Ereignis-Overlay öffnet.
-  const chipTitle = h('span'), chipTime = h('span', { class: 'chip-time' });
-  chipEl.append(chipTitle, chipTime);
-  chipEl.addEventListener('click', () => {
-    if (ctx.S.event) ctx.scenes.openOverlay('ereignis');
-  });
-
-  function renderChip() {
-    const pending = ctx.S.event;
-    const event = pending && !pending.open && !navEl.hidden ? findEvent(pending.id) : null;
-    if (chipEl.hidden !== !event) chipEl.hidden = !event;
-    if (!event) return;
-    setText(chipTitle, `${event.icon} ${event.title}!`);
-    setText(chipTime, `noch ${Math.ceil(pending.ttl)} s · antippen`);
-  }
-
+export function createHud({ hudEl, navEl, ctx }) {
   const $ = id => hudEl.querySelector('#' + id);
   const navScenes = ctx.scenes.list().filter(s => s.nav).sort((a, b) => (a.order || 0) - (b.order || 0));
   const buttons = new Map();
@@ -34,11 +17,12 @@ export function createHud({ hudEl, navEl, chipEl, ctx }) {
     navEl.append(btn);
   });
 
-  // Tastatur: 1–9 wechselt die Szene, Escape schliesst ein Overlay.
+  // Tastatur: 1–6 wechselt die Szene, Escape schliesst ein Overlay.
+  // In der Video-Szene sind Zifferntasten aus, damit man nicht versehentlich ein Video abbricht.
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') { if (ctx.scenes.dismissTop()) e.preventDefault(); return; }
     if (e.ctrlKey || e.altKey || e.metaKey || e.target.closest?.('input, textarea')) return;
-    if (ctx.scenes.modalOpen() || navEl.hidden) return;
+    if (ctx.scenes.modalOpen() || navEl.hidden || ctx.scenes.current === 'video') return;
     const scene = navScenes[Number(e.key) - 1];
     if (scene) { e.preventDefault(); ctx.scenes.go(scene.id); }
   });
@@ -50,16 +34,17 @@ export function createHud({ hudEl, navEl, chipEl, ctx }) {
       for (const [sceneId, btn] of buttons) {
         if (sceneId === id) btn.setAttribute('aria-current', 'page'); else btn.removeAttribute('aria-current');
       }
-      document.title = def.nav ? `${def.title} · Creator Tycoon` : 'Creator Tycoon';
+      document.title = def.nav ? `${def.title} · Vlogvilla` : 'Vlogvilla';
     },
     render() {
-      renderChip();
       if (hudEl.hidden) return;
       const S = ctx.S;
       setText($('hudMoney'), eur(S.money));
       setText($('hudSubs'), fmt(S.subs));
+      setText($('hudGems'), `💎 ${fmt(S.gems)}`);
+      setText($('hudHouse'), `${currentHouse(S).icon} ${currentHouse(S).name}`);
       setText($('hudMoneyRate'), '+' + eur(moneyPerSec(S)) + '/s');
-      setText($('hudSubsRate'), '+' + fmt(subsPerSec(S)) + ' Abos/s');
+      setText($('hudSubsRate'), `${fmt(S.videos)} Videos`);
     },
   };
 }

@@ -1,97 +1,102 @@
 // Alle Formeln des Spiels. Reine Funktionen: lesen den Zustand S, ändern nichts.
 import { BALANCE as B } from '../data/balance.js';
-import { EQUIPMENT } from '../data/equipment.js';
-import { TEAM } from '../data/team.js';
+import { GEAR, GEAR_CATS } from '../data/gear.js';
+import { HOUSES } from '../data/houses.js';
 import { AWARDS } from '../data/awards.js';
-import { PERKS } from '../data/prestige.js';
+import { TOPICS } from '../data/topics.js';
+import { BOARDS, PARTS, SLOTS } from '../data/crates.js';
 
-// Kaufbare Dinge: "up" = Ausrüstung, "w" = Team (so heissen die Felder im Spielstand).
-export const KINDS = {
-  up: { list: EQUIPMENT, growth: B.equipGrowth },
-  w: { list: TEAM, growth: B.teamGrowth },
-};
+// ---------- Geräte ----------
+export function gearTier(S, cat) {
+  const list = GEAR[cat] || [];
+  const t = Math.floor(S.gear?.[cat] || 0);
+  return Math.max(0, Math.min(list.length - 1, t));
+}
+export const gearItem = (S, cat) => GEAR[cat]?.[gearTier(S, cat)] || null;
+export const nextGear = (S, cat) => GEAR[cat]?.[gearTier(S, cat) + 1] || null;
 
-export const owned = (S, kind, id) => Math.max(0, Math.floor(S[kind]?.[id] || 0));
-export const findItem = (kind, id) => KINDS[kind]?.list.find(i => i.id === id) || null;
+export function gearMult(S, effect) {
+  let m = 1;
+  for (const c of GEAR_CATS) if (c.effect === effect) m *= gearItem(S, c.id)?.mult || 1;
+  return m;
+}
 
-// ---------- Multiplikatoren ----------
-export const subMult = S => 1 + Math.sqrt(Math.max(0, S.subs)) / B.subDivisor;
+// ---------- PC-Teile und Hoverboards ----------
+export const findPart = id => PARTS.find(p => p.id === id) || null;
+export const findBoard = id => BOARDS.find(b => b.id === id) || null;
 
+// Bestes Teil je Steckplatz.
+export function bestPart(S, slot) {
+  let best = null;
+  for (const id of Object.keys(S.parts || {})) {
+    const p = findPart(id);
+    if (p && p.slot === slot && (S.parts[id] || 0) > 0 && (!best || p.bonus > best.bonus)) best = p;
+  }
+  return best;
+}
+
+export function partBonus(S, effect) {
+  let sum = 0;
+  for (const s of SLOTS) if (s.effect === effect) sum += bestPart(S, s.id)?.bonus || 0;
+  return sum;
+}
+
+export function boardBonus(S, type) {
+  const b = S.board && (S.boards?.[S.board] || 0) > 0 ? findBoard(S.board) : null;
+  return b && b.bonus.type === type ? b.bonus.value : 0;
+}
+
+// ---------- Stärken ----------
+export const recordPower = S => gearMult(S, 'record') * (1 + partBonus(S, 'record'));
+export const cutPower = S => gearMult(S, 'cut') * (1 + partBonus(S, 'cut'));
+export const uploadSpeed = S => B.baseUploadMBs * gearMult(S, 'upload') * (1 + partBonus(S, 'upload')) * (1 + boardBonus(S, 'upload'));
+export const uploadSeconds = S => Math.max(B.minUploadSeconds, B.uploadSizeMB / uploadSpeed(S));
+
+// ---------- Häuser ----------
+export const houseIndex = S => Math.max(0, Math.min(HOUSES.length - 1, Math.floor(S.house || 0)));
+export const currentHouse = S => HOUSES[houseIndex(S)];
+export const nextHouse = S => HOUSES[houseIndex(S) + 1] || null;
+// Haus i bringt × (houseMult + i × houseMultStep). Spätere Häuser bringen also mehr, damit der
+// Preis (× 10 pro Haus) nicht irgendwann unerreichbar wird.
+export const houseStep = i => B.houseMult + (i - 1) * B.houseMultStep;
+export function houseMult(S) {
+  let m = 1;
+  for (let i = 1; i <= houseIndex(S); i++) m *= houseStep(i);
+  return m;
+}
+
+// ---------- Awards ----------
 export function awardMult(S) {
   let bonus = 0;
   for (const a of AWARDS) if (S.awards.includes(a.id)) bonus += a.bonus ?? B.awardBonus;
   return 1 + bonus;
 }
-
-export const perkLevel = (S, id) => Math.max(0, Math.floor(S.perks?.[id] || 0));
-
-export function perkEffect(S, effect) {
-  let sum = 0;
-  for (const p of PERKS) if (p.effect === effect) sum += perkLevel(S, p.id) * p.per;
-  return sum;
-}
-
-export const fameMult = S => 1 + Math.max(0, S.fameTotal || 0) * B.famePassive;
-
-// Zeitlich begrenzte Boni: target ist "money", "subs" oder "all".
-export function buffMult(S, target) {
-  let m = 1;
-  for (const b of S.buffs || []) if (b.target === target || b.target === 'all') m *= b.mult;
-  return m;
-}
-
-export const moneyMult = S =>
-  subMult(S) * awardMult(S) * fameMult(S) * (1 + perkEffect(S, 'money')) * buffMult(S, 'money');
-export const subsGainMult = S => (1 + perkEffect(S, 'subs')) * buffMult(S, 'subs');
-
-// ---------- Einnahmen ----------
-export const clickBase = S => 1 + EQUIPMENT.reduce((sum, u) => sum + owned(S, 'up', u.id) * u.add, 0);
-export const viewsPerSec = S => TEAM.reduce((sum, w) => sum + owned(S, 'w', w.id) * w.rate, 0);
-export const clickMoney = S => clickBase(S) * moneyMult(S);
-export const clickSubs = S => Math.max(1, clickBase(S) * B.clickSubs) * subsGainMult(S);
-export const moneyPerSec = S => viewsPerSec(S) * moneyMult(S);
-export const subsPerSec = S => viewsPerSec(S) * B.viewSubs * subsGainMult(S);
-export const viralChance = S => Math.min(1, B.viralChance + perkEffect(S, 'viral'));
-export const offlineRate = S => Math.min(1, B.offlineRate + perkEffect(S, 'offline'));
-
-export function startMoney(S) {
-  const level = perkEffect(S, 'startMoney');
-  return level > 0 ? B.startMoneyBase * Math.pow(B.startMoneyFactor, level - 1) : 0;
-}
-
-// ---------- Kosten ----------
-// Preis für n Stück, wenn man schon "have" besitzt (geometrische Reihe, aufgerundet).
-export function bulkCost(base, growth, have, n) {
-  if (!(n > 0)) return 0;
-  return Math.ceil(base * Math.pow(growth, have) * (Math.pow(growth, n) - 1) / (growth - 1));
-}
-
-// Grösste Stückzahl, die man sich leisten kann. Die Formel liefert nur eine Schätzung
-// (Gleitkomma!), deshalb wird das Ergebnis gegen bulkCost geprüft und korrigiert.
-export function maxAffordable(base, growth, have, money) {
-  if (!(money > 0) || !Number.isFinite(money)) return 0;
-  let n = Math.floor(Math.log(money * (growth - 1) / (base * Math.pow(growth, have)) + 1) / Math.log(growth));
-  if (!Number.isFinite(n) || n < 0) n = 0;
-  n = Math.min(n, 10000);
-  while (n > 0 && bulkCost(base, growth, have, n) > money) n--;
-  while (n < 10000 && bulkCost(base, growth, have, n + 1) <= money) n++;
-  return n;
-}
-
-export function cost(S, kind, id, n = 1) {
-  const item = findItem(kind, id);
-  return item ? bulkCost(item.base, KINDS[kind].growth, owned(S, kind, id), n) : Infinity;
-}
-
-export function maxBuy(S, kind, id) {
-  const item = findItem(kind, id);
-  return item ? maxAffordable(item.base, KINDS[kind].growth, owned(S, kind, id), S.money) : 0;
-}
-
-// Stückzahl für einen Kaufmodus: 1, 10 oder "max" (mindestens 1, damit ein Preis angezeigt wird).
-export function buyCount(S, kind, id, mode) {
-  return mode === 'max' ? Math.max(1, maxBuy(S, kind, id)) : Math.max(1, Math.floor(mode) || 1);
-}
-
-// ---------- Awards ----------
 export const nextAward = S => AWARDS.find(a => !S.awards.includes(a.id)) || null;
+
+// ---------- Aufrufe, Geld, Abos ----------
+// Reichweite wächst mit dem Logarithmus der Abos. Eine Wurzel würde sich mit dem Hausbonus
+// gegenseitig hochschaukeln (siehe docs/ENTSCHEIDUNGEN.md).
+export const audience = S => 1 + Math.log10(1 + Math.max(0, S.subs)) * B.audienceLog;
+export const viewMult = S => houseMult(S) * gearMult(S, 'views') * awardMult(S) * (1 + boardBonus(S, 'views'));
+export const moneyMult = S => 1 + boardBonus(S, 'money');
+export const subsMult = S => 1 + boardBonus(S, 'subs');
+
+export const findTopic = id => TOPICS.find(t => t.id === id) || null;
+export const topicUnlocked = (S, t) => S.subs >= (t.minSubs || 0);
+
+// Ergebnis eines fertigen Videos (ohne Zufall und ohne den Zustand zu ändern).
+export function videoOutcome(S, { points, quality, topic }) {
+  const q = Math.max(0, Math.min(B.qualityCap, quality || 0));
+  const views = Math.max(0, points || 0) * (B.qualityBase + q) * audience(S) * viewMult(S);
+  return {
+    views,
+    money: views * B.moneyPerView * (topic?.money ?? 1) * moneyMult(S),
+    // Neue Abos wachsen langsamer als die Aufrufe: je grösser der Kanal, desto schwerer.
+    subs: B.subsPerView * Math.pow(views, B.subsExp) * (topic?.subs ?? 1) * subsMult(S),
+  };
+}
+
+// Alte Videos laufen weiter: Geld pro Sekunde (Abos kommen nur durch neue Videos).
+// Kein viewMult hier: die Abos sind schon mit allen Boni entstanden, sonst zählten sie doppelt.
+export const passiveViews = S => Math.max(0, S.subs) * B.passiveViewsPerSub;
+export const moneyPerSec = S => passiveViews(S) * B.moneyPerView * moneyMult(S);

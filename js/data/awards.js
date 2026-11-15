@@ -1,13 +1,13 @@
-// Awards: Meilensteine nach Abonnenten, aufsteigend sortiert. Neuer Award = eine neue Zeile.
-// Jeder Award gibt BALANCE.awardBonus auf alle Einnahmen (oder einen eigenen Wert über "bonus").
-// Die id darf sich nie ändern, sie steht in den Spielständen.
+// Auszeichnungen für Abo-Meilensteine, aufsteigend. Neuer Award = eine neue Zeile.
+// Jeder Award: Aufrufe × (1 + bonus) und einmalig gems Juwelen. Die id darf sich nie ändern.
 export const AWARDS = [
-  { id: 'fans',       icon: '🌱', name: 'Erste Fans',    subs: 200 },
-  { id: 'tausend',    icon: '🎉', name: 'Geheimtipp',    subs: 2500 },
-  { id: 'aufsteiger', icon: '⭐', name: 'Aufsteiger',    subs: 25000 },
-  { id: 'silber',     icon: '🥈', name: 'Silber-Award',  subs: 250000 },
-  { id: 'gold',       icon: '🥇', name: 'Gold-Award',    subs: 2e6 },
-  { id: 'diamant',    icon: '💎', name: 'Diamant-Award', subs: 1e7 },
-  { id: 'rubin',      icon: '❤️‍🔥', name: 'Rubin-Award',   subs: 1e8 },
-  { id: 'legende',    icon: '👑', name: 'Legende',       subs: 1e9 },
+  { id: 'funke',     icon: '✨', name: 'Goldener Funke',        subs: 1e5,  bonus: 0.25, gems: 50 },
+  { id: 'stern',     icon: '⭐', name: 'Goldener Stern',        subs: 1e6,  bonus: 0.25, gems: 80 },
+  { id: 'krone',     icon: '👑', name: 'Goldene Krone',         subs: 1e7,  bonus: 0.25, gems: 120 },
+  { id: 'komet',     icon: '☄️', name: 'Goldener Komet',        subs: 1e8,  bonus: 0.25, gems: 160 },
+  { id: 'sonne',     icon: '☀️', name: 'Goldene Sonne',         subs: 5e8,  bonus: 0.25, gems: 200 },
+  { id: 'galaxie',   icon: '🌌', name: 'Goldene Galaxie',       subs: 1e9,  bonus: 0.3, gems: 250 },
+  { id: 'nova',      icon: '💥', name: 'Goldene Nova',          subs: 5e10, bonus: 0.35, gems: 300 },
+  { id: 'kosmos',    icon: '🪐', name: 'Goldener Kosmos',       subs: 5e11, bonus: 0.35, gems: 400 },
+  { id: 'unendlich', icon: '♾️', name: 'Goldene Unendlichkeit', subs: 1e12, bonus: 0.5, gems: 500 },
 ];

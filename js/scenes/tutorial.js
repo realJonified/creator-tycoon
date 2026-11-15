@@ -1,10 +1,11 @@
-// Tutorial: drei kurze Schritte für neue Spieler. Neuer Schritt = eine neue Zeile in STEPS.
+// Tutorial: vier kurze Schritte für neue Spieler. Neuer Schritt = eine neue Zeile in STEPS.
 import { h } from '../ui/dom.js';
 
 const STEPS = [
-  { icon: '⏺️', title: 'Videos aufnehmen', text: 'Tippe im Studio auf den roten Knopf. Jedes Video bringt Geld und Abonnenten.' },
-  { icon: '🛒', title: 'Im Shop einkaufen', text: 'Ausrüstung macht jedes Video wertvoller. Dein Team verdient von allein, sogar wenn du weg bist.' },
-  { icon: '🏆', title: 'Wachsen', text: 'Abonnenten erhöhen alle Einnahmen, Awards geben Boni. Später gründest du einen neuen Kanal und sammelst Ruhm.' },
+  { icon: '🛖', title: 'Dein erstes Zuhause', text: 'Du startest im Gartenhäuschen mit einem alten Rechner. Klein, aber deins.' },
+  { icon: '🎬', title: 'Videos machen', text: 'Wähle ein Spiel, tippe die Buchstaben beim Aufnehmen, tippe schnell beim Schnitt und lade hoch. Gutes Video, viele Aufrufe!' },
+  { icon: '🛒', title: 'Besser werden', text: 'Mit dem Geld kaufst du PCs, Mäuse, Router und Handys. Ein besseres WLAN macht den Upload schneller.' },
+  { icon: '🏡', title: 'Umziehen und sammeln', text: 'Größere Häuser bringen mehr Aufrufe. Juwelen öffnen Kisten mit Hoverboards und PC-Teilen. Ab 100.000 Abos gibt es goldene Awards.' },
 ];
 
 export default {
@@ -16,7 +17,7 @@ export default {
     function finish() {
       ctx.S.tutorialDone = true;
       ctx.persist();
-      ctx.scenes.go('studio');
+      ctx.scenes.go('haus');
     }
 
     function show() {

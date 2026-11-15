@@ -51,7 +51,7 @@ export default {
     function onReset() {
       ctx.scenes.openOverlay('bestaetigen', {
         icon: '🗑️', title: 'Wirklich neu beginnen?',
-        text: 'Dein Kanal, dein Geld und dein Ruhm gehen verloren. Das lässt sich nicht rückgängig machen.',
+        text: 'Dein Kanal, dein Geld, deine Häuser und Juwelen gehen verloren. Das lässt sich nicht rückgängig machen.',
         yes: 'Ja, alles löschen', danger: true,
         onYes: () => { ctx.newGame(); ctx.scenes.go('tutorial'); },
       });
@@ -84,10 +84,10 @@ export default {
           ),
           h('div', { class: 'card' },
             h('h2', null, 'Neustart'),
-            h('p', { class: 'muted small' }, 'Löscht den gesamten Fortschritt, auch Ruhm und Boni.'),
+            h('p', { class: 'muted small' }, 'Löscht den gesamten Fortschritt, auch Häuser, Juwelen, Hoverboards und PC-Teile.'),
             h('button', { class: 'btn danger', type: 'button', onclick: onReset }, '🗑️ Spiel zurücksetzen'),
           ),
-          h('p', { class: 'muted small center' }, `Creator Tycoon · Spielstand-Version ${VERSION}`),
+          h('p', { class: 'muted small center' }, `Vlogvilla · Spielstand-Version ${VERSION}`),
         );
       },
     };

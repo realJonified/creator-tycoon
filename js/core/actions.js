@@ -1,70 +1,50 @@
 // Verbindet die Spielzüge mit dem Store: führt sie aus und meldet, was passiert ist.
-// Szenen rufen nur diese Funktionen auf und hören auf Store-Ereignisse.
-import { recordVideo, buy, tick, applyOffline } from './game.js';
-import { buyCount } from './formulas.js';
-import { tickEvents, resolveEvent } from './events.js';
-import { doPrestige, buyPerk } from './prestige.js';
-import { ensureGoals, tickGoals, claimGoal, dayKey } from './goals.js';
+import { tick, applyOffline, finishVideo, buyGear, buyHouse, checkAwards } from './game.js';
+import { openCrate, equipBoard } from './crates.js';
 
-export function createActions(store, { rng = Math.random, today = () => dayKey() } = {}) {
+export function createActions(store, { rng = Math.random } = {}) {
   const S = () => store.state;
+  const awards = list => { for (const award of list) store.emit('award', { award }); };
 
   return {
-    record() {
-      const result = recordVideo(S(), rng);
-      store.emit('video', result);
-      if (result.viral) store.emit('viral', result);
-      return result;
-    },
+    tick(dt) { awards(tick(S(), dt)); },
 
-    // mode: 1, 10 oder "max"
-    buy(kind, id, mode = 1) {
-      const n = buyCount(S(), kind, id, mode);
-      const ok = buy(S(), kind, id, n);
-      store.emit(ok ? 'purchase' : 'denied', { kind, id, n });
-      return ok;
-    },
-
-    tick(dt) {
-      for (const e of tick(S(), dt)) store.emit(e.type, e);
-      const e = tickEvents(S(), dt, rng);
-      if (e) store.emit(e.type, e);
-      if (ensureGoals(S(), today())) store.emit('goals', S().goals);
-      for (const goal of tickGoals(S())) store.emit('goalDone', goal);
-    },
-
-    // Zeit, in der das Spiel nicht lief (Tab im Hintergrund oder geschlossen).
     away(seconds) {
-      const result = applyOffline(S(), seconds);
-      if (result) store.emit('offline', result);
-      return result;
+      const r = applyOffline(S(), seconds);
+      if (r) store.emit('offline', r);
+      return r;
     },
 
-    // Ereignisse: öffnen hält die Uhr an, schliessen ohne Wahl lässt sie weiterlaufen.
-    openEvent() { if (S().event) S().event.open = true; },
-    closeEvent() { if (S().event) S().event.open = false; },
-    chooseEvent(index) {
-      const result = resolveEvent(S(), index, rng);
-      if (result) store.emit('eventResolved', result);
-      return result;
+    finishVideo(video) {
+      const r = finishVideo(S(), video);
+      store.emit('video', r);
+      awards(r.awards);
+      return r;
     },
 
-    prestige() {
-      const gain = doPrestige(S(), rng);
-      if (gain > 0) store.emit('prestige', { gain });
-      return gain;
+    buyGear(cat) {
+      const item = buyGear(S(), cat);
+      store.emit(item ? 'purchase' : 'denied', { cat, item });
+      return item;
     },
 
-    buyPerk(id) {
-      const ok = buyPerk(S(), id);
-      store.emit(ok ? 'perk' : 'denied', { id });
+    buyHouse() {
+      const house = buyHouse(S());
+      store.emit(house ? 'house' : 'denied', { house });
+      if (house) awards(checkAwards(S()));
+      return house;
+    },
+
+    openCrate(id) {
+      const r = openCrate(S(), id, rng);
+      store.emit(r ? 'crate' : 'denied', r);
+      return r;
+    },
+
+    equipBoard(id) {
+      const ok = equipBoard(S(), id);
+      if (ok) store.emit('equip', { id });
       return ok;
-    },
-
-    claimGoal(index) {
-      const result = claimGoal(S(), index);
-      if (result) store.emit('goalClaimed', result);
-      return result;
     },
   };
 }

@@ -1,30 +1,34 @@
-// Awards-Regal: alle Meilensteine und der Fortschritt zum nächsten.
-import { h, setText, progressBar } from '../ui/dom.js';
+// Meilensteine: goldene Abzeichen für Abo-Zahlen.
+import { h, svg, setText, progressBar } from '../ui/dom.js';
 import { fmt, fmtPercent } from '../core/format.js';
 import { awardMult, nextAward } from '../core/formulas.js';
+import { badgeSVG } from '../ui/art.js';
 import { AWARDS } from '../data/awards.js';
-import { BALANCE as B } from '../data/balance.js';
 
 export default {
-  id: 'awards', title: 'Awards', icon: '🏆', nav: true, order: 3,
+  id: 'awards', title: 'Awards', icon: '🏆', nav: true, order: 5,
 
   create(ctx) {
-    const tiles = new Map();
     const bar = progressBar('Fortschritt zum nächsten Award');
-    let bonus, nextText;
+    let bonus, nextText, shelf, key = '';
 
     function render() {
       const S = ctx.S;
-      for (const [id, tile] of tiles) {
-        const got = S.awards.includes(id);
-        tile.el.classList.toggle('got', got);
-        setText(tile.state, got ? 'Geholt ✓' : 'Noch offen');
+      const k = S.awards.join();
+      if (k !== key) {
+        key = k;
+        shelf.replaceChildren(...AWARDS.map(a => {
+          const got = S.awards.includes(a.id);
+          return h('div', { class: 'award' + (got ? ' got' : '') },
+            svg(badgeSVG(a, { got }), 'badge'),
+            h('div', { class: 'award-name' }, a.name),
+            h('div', { class: 'muted small' }, `${fmt(a.subs)} Abos`),
+            h('div', { class: 'award-state small' }, got ? `+${fmtPercent(a.bonus)} Aufrufe ✓` : `+${fmtPercent(a.bonus)} · ${a.gems} 💎`));
+        }));
       }
-      setText(bonus, `${S.awards.length} von ${AWARDS.length} · +${fmtPercent(awardMult(S) - 1)} Einnahmen`);
+      setText(bonus, `${S.awards.length} von ${AWARDS.length} · Aufrufe +${fmtPercent(awardMult(S) - 1)}`);
       const next = nextAward(S);
-      setText(nextText, next
-        ? `Nächster Award: ${next.icon} ${next.name} bei ${fmt(next.subs)} Abos (du hast ${fmt(S.subs)})`
-        : 'Du hast alle Awards dieses Kanals geholt. 👑');
+      setText(nextText, next ? `Nächster Award: ${next.icon} ${next.name} bei ${fmt(next.subs)} Abos (du hast ${fmt(S.subs)})` : 'Du hast alle Awards! ♾️');
       bar.set(next ? S.subs / next.subs : 1);
     }
 
@@ -33,17 +37,7 @@ export default {
         el.append(
           h('div', { class: 'row between scene-head' }, h('h1', null, 'Awards'), bonus = h('span', { class: 'sub' })),
           h('div', { class: 'card' }, nextText = h('p', { class: 'tight' }), bar.el),
-          h('div', { class: 'shelf' }, AWARDS.map(a => {
-            const tile = {};
-            tile.el = h('div', { class: 'award' },
-              h('div', { class: 'award-icon', 'aria-hidden': 'true' }, a.icon),
-              h('div', { class: 'award-name' }, a.name),
-              h('div', { class: 'muted small' }, `${fmt(a.subs)} Abos · +${fmtPercent(a.bonus ?? B.awardBonus)}`),
-              tile.state = h('div', { class: 'award-state small' }),
-            );
-            tiles.set(a.id, tile);
-            return tile.el;
-          })),
+          shelf = h('div', { class: 'shelf' }),
         );
       },
       render,

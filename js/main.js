@@ -5,10 +5,8 @@ import { createSceneManager } from './core/scenes.js';
 import { createActions } from './core/actions.js';
 import { createAudio } from './core/audio.js';
 import { loadGame, saveGame } from './core/save.js';
-import { newState, applyOffline } from './core/game.js';
-import { eur, fmt, fmtPercent } from './core/format.js';
-import { BALANCE as B } from './data/balance.js';
-import { goalText } from './core/goals.js';
+import { newState, applyOffline, checkAwards } from './core/game.js';
+import { eur } from './core/format.js';
 import { createHud } from './ui/hud.js';
 import { createToast } from './ui/toast.js';
 import { SCENES, START_SCENE } from './scenes/index.js';
@@ -23,21 +21,21 @@ const storage = (() => {
 
 const loaded = loadGame(storage);
 const store = createStore(loaded.state);
+checkAwards(store.state); // Awards für mitgebrachte Abos (z. B. aus alten Spielständen) still nachtragen
 const offline = applyOffline(store.state, (Date.now() - store.state.last) / 1000);
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+let playing = false;
 
 // ctx ist das, was jede Szene bekommt.
 const ctx = {
   store,
   get S() { return store.state; },
   hasSave: loaded.source !== 'new',
-  migrated: loaded.source === 'v1',
-  offline: offline?.notice ? offline : null,   // für die Anzeige auf dem Titelbild
-  ui: { buyMode: 1 },
+  migrated: loaded.source === 'v1' || loaded.source === 'v2',
+  offline: offline?.notice ? offline : null,
   animations: () => store.state.settings.anim && !reducedMotion.matches,
   persist: () => saveGame(storage, store.state),
   applySettings() { document.documentElement.dataset.anim = store.state.settings.anim ? 'on' : 'off'; },
-  // Ersetzt den Spielstand (Import) oder beginnt neu. Einstellungen bleiben bei einem Neustart.
   replaceState(next) { store.replace(next); ctx.hasSave = true; ctx.offline = null; ctx.applySettings(); ctx.persist(); },
   newGame() {
     const fresh = newState();
@@ -53,31 +51,32 @@ ctx.scenes = createSceneManager({
   animate: ctx.animations,
   onChange: (id, def) => { playing = !!def.nav; hud.setActive(id, def); },
 });
-let playing = false;
 for (const scene of SCENES) ctx.scenes.register(scene);
-const hud = createHud({ hudEl: $('hud'), navEl: $('nav'), chipEl: $('eventChip'), ctx });
+const hud = createHud({ hudEl: $('hud'), navEl: $('nav'), ctx });
 ctx.applySettings();
 
 // ---------- Meldungen ----------
+// Awards erscheinen nacheinander als Overlay mit Animation.
+const awardQueue = [];
+function showNextAward() {
+  if (!awardQueue.length || ctx.scenes.isOpen('award')) return;
+  const award = awardQueue.shift();
+  const entry = ctx.scenes.openOverlay('award', { award });
+  const close = entry.close;
+  entry.close = () => { close(); setTimeout(showNextAward, 150); };
+}
 store.on('award', ({ award }) => {
-  ctx.audio.play('award');
-  ctx.toast(`${award.icon} ${award.name} geholt! +${fmtPercent(award.bonus ?? B.awardBonus)} Einnahmen`);
-});
-store.on('viral', result => {
-  if (!ctx.scenes.isOpen('viral')) ctx.scenes.openOverlay('viral', { result });
-});
-store.on('event', () => ctx.audio.play('event'));
-store.on('goalDone', goal => {
-  ctx.audio.play('good');
-  ctx.toast(`🎯 Tagesziel erreicht: ${goalText(goal, fmt)}. Hol dir die Belohnung im Studio!`);
+  ctx.toast(`🏆 ${award.name} freigeschaltet!`);
+  awardQueue.push(award);
+  ctx.persist();
+  showNextAward();
 });
 store.on('offline', r => {
-  if (r.notice) ctx.toast(`😴 Während du weg warst: +${eur(r.money)} und +${fmt(r.subs)} Abos`);
+  if (r.notice) ctx.toast(`😴 Während du weg warst: +${eur(r.money)}`);
 });
 
 // ---------- Loop ----------
 const loop = createLoop({
-  // Auf Titelbild und im Tutorial steht das Spiel still.
   update(dt) { if (playing) ctx.game.tick(dt); ctx.scenes.update(dt); },
   render() { hud.render(); ctx.scenes.render(); },
   onAway(seconds) { if (playing) ctx.game.away(seconds); },
@@ -88,7 +87,6 @@ setInterval(ctx.persist, 10000);
 document.addEventListener('visibilitychange', () => { if (document.hidden) ctx.persist(); });
 addEventListener('pagehide', ctx.persist);
 
-// Ton erst nach der ersten Eingabe erlauben.
 for (const type of ['pointerdown', 'keydown']) {
   addEventListener(type, () => ctx.audio.unlock(), { once: true, capture: true });
 }
@@ -96,4 +94,4 @@ for (const type of ['pointerdown', 'keydown']) {
 ctx.scenes.go(START_SCENE).then(() => loop.start());
 
 // Zum Ausprobieren in der Browser-Konsole.
-globalThis.creatorTycoon = ctx;
+globalThis.vlogvilla = ctx;

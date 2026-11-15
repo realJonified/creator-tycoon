@@ -16,6 +16,14 @@ export function h(tag, attrs, ...kids) {
   return el;
 }
 
+// Wandelt einen selbst erzeugten SVG-Text (aus art.js) in ein Element um.
+export function svg(markup, cls = 'art') {
+  const box = document.createElement('div');
+  box.className = cls;
+  box.innerHTML = markup;
+  return box;
+}
+
 // Schreibt Text nur, wenn er sich geändert hat (schont Layout und Screenreader).
 export function setText(el, text) {
   if (el.textContent !== text) el.textContent = text;
