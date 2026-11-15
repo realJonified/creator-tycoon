@@ -61,6 +61,30 @@ Eine Zeile pro Annahme, die ich ohne Rückfrage getroffen habe.
 
   Die Grafikkarte ist sehr stark, die absoluten Zahlen sagen über normale PCs und Handys wenig. Aussagekräftig ist das Verhältnis: Hoch kostet auf Map 1 etwa 2,5-mal so viel wie Mittel und 3,5-mal so viel wie Niedrig. Die im Test-Browser angezeigten FPS (10–50) kommen vom Hintergrundfenster und sind nicht verwertbar. Auf einem echten Handy und einem normalen PC habe ich nicht gemessen.
 
+### Etappe 5: Balancing
+- **Eine Zahlen-Datei:** Alle Zahlen der 3D-Welt stehen jetzt in `js3d/data/balance.js` (Wirtschaft, Map-Freischaltung, Hauspreise, PC-Teile, Spiele, Play-Buttons, Kiste, Glücksbringer, Boss, Video). `content.js` und `maps.js` enthalten nur noch Namen, Symbole und Orte und holen die Zahlen von dort.
+- Das Skript heisst `tools/balance-welt.js`, weil `tools/balance.js` schon die Simulation des 2D-Spiels (Klassik) ist. Es benutzt dieselbe Spiellogik wie das Spiel (`js3d/core/*`), nicht eine Nachbildung. Die Ziele stehen oben im Skript (`TARGETS`), das Spielermodell darunter (`PLAYER`).
+- **Erste Messung** mit den Zahlen aus Version 1: Map 1 nach 56 Minuten, die 1 Billion erst 37 Stunden danach. Beides lag ausserhalb der Ziele.
+- **PC-Teile wirken jetzt multiplikativ** (Video × (1 + Qualität) pro Stufe). Vorher wurden die Boni addiert, deshalb waren Teile spät fast wertlos und die Lücke bis zur Billion riesig. Die multiplikative Fassung kann davonlaufen: Bringt eine Kaufrunde aller sechs Teile mehr, als ihre Preise steigen, finanziert sich jede Runde selbst (beim ersten Versuch war alles in 10 Minuten gekauft). Darum sind die Qualitätswerte klein (zusammen etwa × 1,42 pro Runde bei Preisen × 1,5 bis × 1,6). In der Datei steht dazu eine Warnung.
+- Weitere angepasste Zahlen: Geld pro Aufruf 0,035 (Map 1 sonst zu schnell), passive Aufrufe 0,1 pro Abo und Sekunde (sonst trägt das passive Geld allein bis zur Billion), Mindestgeld aus der Kiste 20.000 € (hilft am Anfang, später zählt der Videowert).
+- Annahmen im Spielermodell: 85 % getroffene Buchstaben, 6 Tipper/s, 8 s Wege und Auswahl pro Video, 85 % gewonnene Bosskämpfe mit je 45 s. Gekauft wird zuerst das nächste Haus, dann die nächste Map, PC-Teile nur, wenn das günstigste unter 4 % des nächsten Ziels kostet.
+- **Ergebnis** (Seed 1):
+
+  | Meilenstein | aktiver Spieler | oft offline: aktiv | oft offline: echte Zeit |
+  |---|---|---|---|
+  | Erstes Haus (50.000 €) | 24 min | – | – |
+  | Map 1 komplett | 3 h 48 min | 3 h | 24 h |
+  | Map 2 freigeschaltet (1 Bio. €) | 7 h 41 min | 6 h 15 min | 54 h 15 min |
+  | Abstand Map 1 → Map 2 | 3 h 53 min | 3 h 15 min | – |
+
+  Der Gelegenheitsspieler spielt 20 Minuten und ist dann 3 Stunden weg (Offline-Einnahmen 50 %, höchstens 8 h). Er braucht weniger aktive Zeit, aber über zwei Tage echte Zeit. Mit den Startwerten 1 bis 5 lag Map 1 zwischen 3 h 42 min und 4 h 15 min, der Abstand zur Billion zwischen 3 h 24 min und 4 h 8 min. Der Test `tests/balance-welt.test.js` prüft die Ziele mit drei Startwerten.
+- Auf Map 2 wird es am Ende schnell: Alle 7 Häuser sind etwa 4 Stunden nach dem Freischalten gekauft, weil jedes Haus × 2,5 Aufrufe bringt. Für Map 3 (Frostgipfel, 10 Billiarden) braucht es eigene Zahlen, wenn sie gebaut wird. Das Skript zeigt das dann sofort.
+- **Grosse Zahlen:** Geld und Abos bleiben normale JavaScript-Zahlen (double, bis etwa 1e308, Obergrenze 1e300). BigInt wäre exakt, passt aber nicht zu Multiplikatoren mit Kommazahlen und hätte einen Umbau des ganzen Spiels bedeutet. Ab 2^53 (etwa 9 Billiarden) sind Doubles nicht mehr auf den Euro genau. Damit dabei nichts schiefgeht, gibt es `js3d/core/num.js`:
+  - `canAfford` erlaubt eine relative Abweichung von 1e-14 (bei 1 Billion sind das 0,01 €), damit 999.999.999.999,9999 € für einen Preis von 1 Billion reichen. 1e-12 war zu grosszügig (1 € bei 1 Billion).
+  - `spend` setzt einen winzigen Rest auf 0 und wird nie negativ. `addClamped` hält Werte unter der Obergrenze.
+  - Die Anzeige rundet auf Tsd., Mio., Mrd. und Bio. Alles ist in `tests/num.test.js` getestet.
+- **Abschluss-Check** (Grafik Hoch, nach 10, 20 und 30 Map-Wechseln): Geometrien 41, Texturen 18, Shader-Programme 28, Szenen-Objekte 8, alles gleichbleibend. Der JS-Speicher pendelt zwischen 21 und 42 MB und fällt nach der Speicherbereinigung wieder auf 21 MB. Die Konsole blieb ohne Fehler. Klassik ist über das Startmenü erreichbar, und von dort führt ein Knopf zurück in die 3D-Welt.
+
 ## 3D-Welt „Kanalbucht“ (Branch welt-v1)
 - Der Branch `welt-v1` baut auf `ausbau` (Vlogvilla) auf, weil das der neueste Stand war. „Klassik“ ist deshalb Vlogvilla, nicht die allererste Version.
 - Die 3D-Welt liegt auf `index.html`, das 2D-Spiel auf `klassik.html`. Beide verlinken sich gegenseitig (Startbild und Menü).

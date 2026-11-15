@@ -1,6 +1,6 @@
 # 🏝️ Kanalbucht
 
-Eine 3D-Insel im Browser: Lauf herum, mach in deiner Wohnung Videos, kauf PC-Teile und Häuser und besiege alle 5 Minuten den Glitchgolem hinter dem Portal. Einzelspieler, ohne Konto, gespeichert wird nur im Browser.
+Eine 3D-Welt im Browser: Lauf herum, mach in deiner Wohnung Videos, kauf PC-Teile und Häuser, triff andere (erfundene) Video-Creator und besiege alle 5 Minuten den Glitchgolem hinter dem Portal. Mit Update 2 gibt es mehrere Maps. Einzelspieler, ohne Konto, gespeichert wird nur im Browser.
 
 ## 👉 [Jetzt spielen!](https://realjonified.github.io/creator-tycoon/) · [Klassik (2D)](https://realjonified.github.io/creator-tycoon/klassik.html)
 
@@ -9,35 +9,75 @@ Eine 3D-Insel im Browser: Lauf herum, mach in deiner Wohnung Videos, kauf PC-Tei
 |---|---|---|
 | Laufen | W A S D oder Pfeiltasten, Shift = rennen | Joystick (linke Bildschirmhälfte) |
 | Umsehen | Maus mit gedrückter Taste ziehen, Mausrad = Zoom | rechte Bildschirmhälfte wischen |
-| Benutzen | E | Knopf rechts |
+| Benutzen, Reden | E | Knopf rechts |
 | Menü | Esc · F3 = FPS-Anzeige | ☰ oben rechts |
 
 - **Wohnung (Norden):** Du startest in einer kleinen Wohnung mit 50 m², schlechtem PC und schlechtem WLAN. Am PC machst du Videos.
 - **Video:** Wähle ein Spiel (sieben erfundene Spiele, von *Kugelkönig* bis *Nebelpiraten*), drück die Buchstaben rechtzeitig, dann folgt der Schnitt (viel tippen), dann der Upload (je nach WLAN). Daraus werden Aufrufe, Geld und Abos.
 - **Bitbazar (rechts vom Kreisel):** Prozessor, Grafikkarte, Maus, Tastatur, Monitor und WLAN-Router. Jeder Kauf macht das nächste Teil teurer und das Video besser.
-- **Häuser:** Am Strand und auf der Insel verteilt. Das zweite kostet 50.000 €, das dritte 500.000 €, danach jeweils das Zehnfache. Gekauft wird an der Haustür.
-- **Portal (Kreisel):** Alle 5 Minuten für 60 Sekunden offen. Drinnen kämpfst du gegen den Glitchgolem (150 Leben). Deine Waffe schiesst von allein, du weichst den roten Kreisen aus. Bei einem Sieg gibt es eine Kiste: Gewöhnlich 72 %, Selten 22 %, Episch 5 %, Legendär 1 %.
+- **Häuser:** Gekauft wird an der Haustür, pro Map der Reihe nach. Map 1: Wohnung (gratis), dann 50.000 €, 500.000 €, 5 Mio. €, 50 Mio. €.
+- **Portal = Weltkarte:** Hier reist du zwischen den Maps und schaltest neue frei. Geld, Abos und PC-Teile nimmst du überallhin mit, Häuser gehören zu ihrer Map.
+- **Boss:** Alle 5 Minuten ist das Boss-Portal 60 Sekunden offen (Knopf oben in der Weltkarte). Der Glitchgolem hat 150 Leben. Deine Waffe schiesst von allein, du weichst den roten Kreisen aus. Bei einem Sieg gibt es eine Kiste: Gewöhnlich 72 %, Selten 22 %, Episch 5 %, Legendär 1 %.
+- **NPC-YouTuber:** Auf jeder Map laufen erfundene Kanäle herum, mit Name und Abozahl über dem Kopf. Komm nahe heran und rede mit ihnen.
 - **Kanalknöpfe:** Bei 100.000 · 1 Mio. · 10 Mio. · 100 Mio. · 500 Mio. · 1 Mrd. · 50 Mrd. · 500 Mrd. · 1 Bio. Abos hängt ein neuer Knopf an deiner Wand.
-- **Alter Spielstand:** Beim ersten Start übernimmt die Insel Geld und Abos aus dem 2D-Spiel (`creatorTycoonSave_v1`, `_v2` oder `vlogvillaSave_v3`).
+- **Alter Spielstand:** Spielstände aus Version 1 werden automatisch auf Update 2 gebracht. Beim allerersten Start übernimmt die Welt Geld und Abos aus dem 2D-Spiel.
+
+## Maps
+| Map | Freischalten | Häuser | Besonderes |
+|---|---|---|---|
+| 🏝️ Kanalbucht | gratis | 5 | Kreisel mit Portal, Bitbazar, Strand |
+| 🫧 Wolkenlagune | 1 Bio. € | 7 | Wolkenhaus auf der schwebenden Insel (Sprungpad), Tiefseekuppel am Lagunengrund (Tauchsteg) |
+| 🏔️ Frostgipfel | Gerüst | – | noch nicht gebaut |
+
+Es ist immer nur eine Map geladen. Beim Wechsel wird die alte Map vollständig entsorgt (Geometrien, Materialien, Texturen).
 
 ## Grafik und Leistung
-- Einstellungen → Grafik: **Niedrig, Mittel, Hoch** oder **Automatisch**. Automatisch startet am PC mit Mittel und am Handy mit Niedrig und schaltet bei zu wenig FPS herunter.
-- Die Pixel-Ratio ist höchstens 1,5. Es gibt ein Licht mit Schatten und Nebel in der Ferne. Gleiche Objekte sind Instanzen, auf der Insel sind es rund 40 Draw-Calls.
-- Die Spiellogik läuft mit festem Zeitschritt (1/60 s) und ist so auf jedem Gerät gleich schnell.
+- Einstellungen → Grafik: **Niedrig, Mittel, Hoch** oder **Automatisch**.
+  - **Niedrig:** keine Echtzeit-Schatten, kurze Sichtweite, für schwache Handys.
+  - **Mittel:** Schatten, Blumen, Wolken (wie Version 1).
+  - **Hoch:** realistischere Materialien mit per Code erzeugter Oberflächenstruktur, Umgebungslicht aus dem Himmel, weiche Schatten, spiegelndes Wasser mit Wellen, Umgebungsverdeckung, leichtes Bloom, Tonemapping, mehr Hausdetails und Grasbüschel.
+- **Automatisch** schlägt beim ersten Start am Handy Niedrig und an einem guten PC Hoch vor und schaltet bei zu wenig FPS herunter (auch von Hoch).
+- Pixel-Ratio höchstens 1,5. Gleiche Objekte sind Instanzen, alle NPCs einer Map zusammen brauchen 8 Draw-Calls.
+- Die Spiellogik läuft mit festem Zeitschritt (1/60 s). Messwerte pro Stufe stehen in `docs/ENTSCHEIDUNGEN.md`.
 
 ## Ordner der 3D-Welt
 ```
-index.html               3D-Welt (Kanalbucht)
-klassik.html             2D-Spiel (Vlogvilla), siehe unten
+index.html                  3D-Welt (Kanalbucht)
+klassik.html                2D-Spiel (Vlogvilla), siehe unten
 vendor/three.module.min.js  three.js r170 (MIT, lokal, kein CDN)
-css/welt.css             Oberfläche der 3D-Welt
-js3d/main.js             Start, Orte (Insel, Haus, Arena), Spielschleife
-js3d/data/               balance.js (Zahlen), content.js (Spiele, PC-Teile, Häuser, Knöpfe, Kiste)
-js3d/core/               Logik ohne Grafik: economy, video, boss, rewards, physics, save
-js3d/scene/              three.js: engine (Licht, Grafikstufen), world, player, camera, input, interior, arena, build
-js3d/ui/                 hud, menu, shop-ui, video-ui, boss-ui
-tests/welt.test.js, tests/physics.test.js   Tests der 3D-Logik
+css/welt.css                Oberfläche der 3D-Welt
+js3d/main.js                Start, Orte (Map, Haus, Arena), Ebenen, Spielschleife
+js3d/data/balance.js        ALLE Zahlen: Wirtschaft, Preise, Kiste, Boss, Video
+js3d/data/maps.js           Maps: Häuser, Ebenen, NPC-Wege, Himmel
+js3d/data/content.js        Namen und Symbole: Spiele, PC-Teile, Knöpfe, Kiste
+js3d/core/                  Logik ohne Grafik: economy, video, boss, rewards, physics, save,
+                            maps (Laden/Entsorgen), npc, quality (Grafikstufen-Regeln), num (grosse Zahlen)
+js3d/scene/                 three.js: engine, hiquality (Grafik Hoch), world (Map 1), maps/ (Bau-Funktionen),
+                            npcs, player, camera, input, interior, arena, build, dispose
+js3d/ui/                    hud, menu, shop-ui, video-ui, boss-ui, worldmap-ui
+tools/balance-welt.js       Balancing-Simulation der 3D-Welt
+tests/                      Unit-Tests (node --test)
 ```
+
+## Neue Map hinzufügen
+1. In `js3d/data/maps.js` einen Eintrag anlegen: `id`, Name, Thema, `build` (Name der Bau-Funktion), Startpunkt, Portal, Himmel, Häuser, `npcPaths` und bei Bedarf `zones` (weitere Ebenen).
+2. Zahlen in `js3d/data/balance.js` ergänzen: `mapUnlock.<id>` und `housePrices.<id>`.
+3. In `js3d/scene/maps/` eine Bau-Funktion schreiben (Vorlage: `lagune.js`, Gerüst: `frost.js`) und in `maps/index.js` eintragen. Sie liefert `{ group, triggers, houseSigns, colliders, zones, update, dispose }` und muss ein Portal enthalten.
+4. `ready: true` setzen, dann `node --test` und `node tools/balance-welt.js` laufen lassen.
+
+## Balancing
+```bash
+node tools/balance-welt.js
+```
+Das Skript simuliert einen aktiven Spieler und einen, der oft offline ist (20 min spielen, 3 h weg). Es gibt eine Tabelle aus: Zeit bis zu jedem Haus, jeder Map und jedem Kanalknopf. Die Ziele stehen oben im Skript (`TARGETS`), alle Zahlen in `js3d/data/balance.js`. Aktueller Stand (aktiver Spieler):
+
+| Meilenstein | aktive Spielzeit |
+|---|---|
+| Erstes Haus (50.000 €) | 24 min |
+| Map 1 komplett (50 Mio. €) | 3 h 48 min |
+| Map 2 freigeschaltet (1 Bio. €) | 7 h 41 min (3 h 53 min nach Map 1) |
+| Silberner Kanalknopf (100.000 Abos) | 3 h 8 min |
+| Kosmos-Kanalknopf (1 Bio. Abos) | 13 h 17 min |
 
 ## Lokal testen
 ```bash
@@ -49,12 +89,12 @@ Danach im Browser http://localhost:8123 öffnen. Ein Doppelklick auf die Datei r
 node --test
 ```
 
-In der Browser-Konsole gibt es `kanalbucht`, zum Beispiel `kanalbucht.openPortal()`, `kanalbucht.S.money = 1e6` oder `kanalbucht.enterArena()`.
+In der Browser-Konsole gibt es `kanalbucht`, zum Beispiel `kanalbucht.openPortal()`, `kanalbucht.S.money = 1e12`, `kanalbucht.travel('lagune')` (wenn freigeschaltet) oder `kanalbucht.engine.benchmark()` (Renderzeit pro Bild).
 
 ## Auf GitHub Pages veröffentlichen
-1. Branch in `main` mergen (oder in den Repo-Einstellungen unter **Settings → Pages** den Branch wählen, der veröffentlicht werden soll).
+1. Branch in `main` mergen.
 2. **Settings → Pages → Build and deployment**: „Deploy from a branch“, Branch `main`, Ordner `/ (root)`.
-3. Nach 1 bis 2 Minuten läuft die Seite unter `https://<name>.github.io/creator-tycoon/`. Es gibt keinen Build-Schritt, die Dateien werden so ausgeliefert, wie sie im Repo liegen (`.nojekyll` liegt bei).
+3. Nach 1 bis 2 Minuten läuft die Seite unter `https://<name>.github.io/creator-tycoon/`. Es gibt keinen Build-Schritt (`.nojekyll` liegt bei).
 
 ---
 
