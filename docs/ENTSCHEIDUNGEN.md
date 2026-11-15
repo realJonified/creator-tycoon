@@ -2,6 +2,19 @@
 
 Eine Zeile pro Annahme, die ich ohne Rückfrage getroffen habe.
 
+## Update 2 (Branch welt-v2)
+
+### Etappe 1: Map-System
+- Maps stehen in `js3d/data/maps.js` (nicht in `js/data`, weil alle Daten der 3D-Welt in `js3d/data` liegen). Jede Map nennt eine Bau-Funktion aus `js3d/scene/maps/index.js`. Map 1 ist die bisherige Insel (`buildBucht` in `world.js`), noch nicht fertige Maps nutzen die Baustellen-Karte `baustelle.js`.
+- Map 1 hat laut Vorgabe nur noch die ersten 5 Häuser (bis Leuchtturmhaus, 50 Mio. €). Die Häuser 6–12 aus Version 1 (Waldhaus bis Kronenschloss) gibt es dort nicht mehr. Wer sie besass, bekommt bei der Migration den vollen Kaufpreis als Geld zurück und sieht beim Start einen Hinweis. Annahme: lieber Geld zurück als eine Map 1, die für alte Spieler anders aussieht.
+- Häuser-ids sind über alle Maps eindeutig. Der Hausbonus (× 2,5 pro Stufe) richtet sich nach dem besten gekauften Haus in der globalen Reihenfolge aller Maps.
+- Maps werden der Reihe nach freigeschaltet: Map 2 für 1 Billion €, Map 3 ist ein Gerüst (`ready: false`, Platzhalterpreis 10 Brd. €, wird im Balancing festgelegt).
+- Das Portal öffnet jetzt die Weltkarte. Damit der Bosskampf aus Version 1 bleibt, steht oben ein „Boss-Portal betreten“-Knopf, solange das Boss-Portal offen ist (alle 5 Minuten für 60 s, wie bisher). Das geht von jeder Map aus, denn jede Map hat ein Portal.
+- Spielstand: gleicher Schlüssel `kanalbuchtSave_v1`, aber Version 2 im Feld `v`. Neue Felder: `maps` (freigeschaltet), `map` (aktuell) und `houses` als `{ mapId: [ids] }`. Ein Spielstand ohne Versionsfeld gilt als Version 1.
+- Karten-Verwalter (`js3d/core/maps.js`): immer genau eine Map, Wechsel in einer Warteschlange (der Test hat gezeigt, dass gleichzeitige Wechsel sonst zwei Maps hinterlassen). Entsorgen über `disposeObject` (Geometrien, Materialien, Texturen, auch Shader-Uniform-Texturen). Geteilte Materialien sind mit `userData.shared` markiert und bleiben bestehen.
+- Der Ladebildschirm wartet auf höchstens zwei Bild-Takte zu je 60 ms. Ohne diese Grenze blieb er in einem Hintergrund-Tab hängen.
+- Speichertest (10 Wechsel Kanalbucht ↔ Baustelle im Browser): Die GPU-Ressourcen bleiben exakt gleich, Kanalbucht immer 38 Geometrien, 3 Texturen, 16 Shader-Programme, Baustelle 23/2/12. Der JS-Heap stieg von 12 auf etwa 30 MB und blieb in den letzten vier Wechseln flach (28/31/31/30 MB). Wann der Browser aufräumt, lässt sich von der Seite aus nicht erzwingen.
+
 ## 3D-Welt „Kanalbucht“ (Branch welt-v1)
 - Der Branch `welt-v1` baut auf `ausbau` (Vlogvilla) auf, weil das der neueste Stand war. „Klassik“ ist deshalb Vlogvilla, nicht die allererste Version.
 - Die 3D-Welt liegt auf `index.html`, das 2D-Spiel auf `klassik.html`. Beide verlinken sich gegenseitig (Startbild und Menü).

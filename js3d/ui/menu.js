@@ -32,7 +32,7 @@ export function openMenu(panels, ctx) {
   });
 }
 
-const S_line = S => `${fmt(S.videos)} Videos · ${S.houses.length} Häuser · ${S.buttons.length} Kanalknöpfe · ${S.stats.bossWins} Boss-Siege`;
+const S_line = S => `${fmt(S.videos)} Videos · ${Object.values(S.houses).flat().length} Häuser · ${S.maps.length} Maps · ${S.buttons.length} Kanalknöpfe · ${S.stats.bossWins} Boss-Siege`;
 
 export function openSettings(panels, ctx) {
   const S = ctx.S;

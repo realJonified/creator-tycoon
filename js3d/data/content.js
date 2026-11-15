@@ -22,22 +22,14 @@ export const PARTS = [
   { id: 'router',   icon: '📶', name: 'WLAN-Router', base: 600,  growth: 1.6,  quality: 0,    speed: 1.35 },
 ];
 
-// Häuser: die Wohnung ist kostenlos, dann 50.000 € und jedes weitere × 10.
-// size = Quadratmeter, x/z/rot = Lage in der Welt, wall/roof = Farben, floors = Stockwerke.
-export const HOUSES = [
-  { id: 'wohnung',  name: 'Kleine Wohnung',   size: 50,    price: 0,      x: 0,   z: -38, rot: 0,            wall: '#e9d8b4', roof: '#8a5a44', floors: 3, kind: 'block' },
-  { id: 'strand1',  name: 'Strandhütte',      size: 75,    price: 5e4,    x: -58, z: -26, rot: Math.PI / 2,  wall: '#fff4e0', roof: '#2fb3c6', floors: 1, kind: 'haus' },
-  { id: 'strand2',  name: 'Dünenhaus',        size: 110,   price: 5e5,    x: -60, z: -6,  rot: Math.PI / 2,  wall: '#ffe3c2', roof: '#e2725b', floors: 1, kind: 'haus' },
-  { id: 'strand3',  name: 'Muschelvilla',     size: 160,   price: 5e6,    x: -60, z: 14,  rot: Math.PI / 2,  wall: '#ffffff', roof: '#4c9be8', floors: 2, kind: 'haus' },
-  { id: 'strand4',  name: 'Leuchtturmhaus',   size: 230,   price: 5e7,    x: -56, z: 34,  rot: Math.PI / 2,  wall: '#f3f0ea', roof: '#d1495b', floors: 2, kind: 'turm' },
-  { id: 'wald',     name: 'Waldhaus',         size: 330,   price: 5e8,    x: -30, z: 52,  rot: Math.PI,      wall: '#a9744f', roof: '#3f6b3a', floors: 2, kind: 'haus' },
-  { id: 'hang',     name: 'Hangvilla',        size: 480,   price: 5e9,    x: 6,   z: 58,  rot: Math.PI,      wall: '#f4ead2', roof: '#6b4a8f', floors: 2, kind: 'villa' },
-  { id: 'teich',    name: 'Teichloft',        size: 700,   price: 5e10,   x: 36,  z: 46,  rot: Math.PI,      wall: '#8fb8c9', roof: '#30475e', floors: 3, kind: 'block' },
-  { id: 'glas',     name: 'Glaspalast',       size: 1000,  price: 5e11,   x: 56,  z: -34, rot: -Math.PI / 2, wall: '#bfe8f5', roof: '#3fa7c9', floors: 3, kind: 'villa' },
-  { id: 'burg',     name: 'Burg Bucht',       size: 1500,  price: 5e12,   x: 34,  z: -54, rot: 0,            wall: '#b5aea6', roof: '#7f1d1d', floors: 3, kind: 'turm' },
-  { id: 'himmel',   name: 'Himmelsturm',      size: 2200,  price: 5e13,   x: -32, z: -50, rot: 0,            wall: '#d6dde8', roof: '#f2b134', floors: 6, kind: 'block' },
-  { id: 'krone',    name: 'Kronenschloss',    size: 3300,  price: 5e14,   x: -6,  z: -62, rot: 0,            wall: '#fff3cf', roof: '#e0a400', floors: 4, kind: 'turm' },
-];
+// Häuser stehen seit Update 2 in js3d/data/maps.js (pro Map). HOUSES ist die Liste über alle Maps
+// in globaler Reihenfolge: Index 0 = Wohnung, danach steigt der Hausbonus.
+import { ALL_HOUSES } from './maps.js';
+export const HOUSES = ALL_HOUSES;
+
+// Häuser aus Version 1, die es auf Map 1 nicht mehr gibt (Map 1 hat seit Update 2 nur 5 Häuser).
+// Wer sie besass, bekommt bei der Migration den Kaufpreis zurück.
+export const REMOVED_V1_HOUSES = { wald: 5e8, hang: 5e9, teich: 5e10, glas: 5e11, burg: 5e12, himmel: 5e13, krone: 5e14 };
 
 // Play-Buttons: Meilensteine nach Abonnenten. Eigenes Design (Stern im Rahmen), Farbe = Material.
 export const BUTTONS = [

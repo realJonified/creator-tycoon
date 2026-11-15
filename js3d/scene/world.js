@@ -3,7 +3,7 @@
 // gleiche Objekte (Bäume, Palmen, Laternen, Blumen, Steine) sind Instanzen.
 import * as THREE from '../../vendor/three.module.min.js';
 import { Builder, matrix, LAMBERT, textSprite } from './build.js';
-import { HOUSES } from '../data/content.js';
+import { disposeObject } from './dispose.js';
 
 export const ISLAND_R = 82;
 export const WALK_R = 78.5;
@@ -79,7 +79,9 @@ export function buildHouse(b, h, i, x, z, rot) {
   return { w: w + (h.kind === 'villa' ? w * 0.3 : 0) + (h.kind === 'turm' ? 2 : 0), d, H };
 }
 
-export function buildWorld(engine, S) {
+// Bau-Funktion für Map 1 (Kanalbucht). map = Datensatz aus js3d/data/maps.js.
+export function buildBucht(engine, S, map) {
+  const HOUSES = map.houses;
   const { scene, details } = engine;
   const group = new THREE.Group();
   scene.add(group);
@@ -307,6 +309,8 @@ export function buildWorld(engine, S) {
 
   return {
     group, colliders, triggers, houseSigns, cloudMesh,
+    update(t) { cloudMesh.rotation.y = t * 0.004; },
+    dispose() { for (const d of [fl, cloudMesh, farMesh]) { const i = details.indexOf(d); if (i >= 0) details.splice(i, 1); } return disposeObject(group); },
     updatePortal(t, open, text) {
       portalMat.uniforms.time.value = t;
       portalMat.uniforms.open.value += ((open ? 1 : 0) - portalMat.uniforms.open.value) * 0.05;

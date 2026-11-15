@@ -114,10 +114,12 @@ export function createEngine(canvas) {
     set onLevel(fn) { onLevel = fn; },
     setSetting, resize, followShadow, measure,
     // Himmel und Nebel umfärben (Insel: Nachmittag, Arena: violette Dämmerung)
-    setSky(top, bottom) {
+    // sky = { top, bottom, hemiSky?, hemiGround?, sun? } aus js3d/data/maps.js; showSun = Sonnenscheibe zeigen
+    setSky(top, bottom, { hemiSky = '#cfe6ff', hemiGround = '#6f8f4a', sun: sunColor = '#ffe0b5', showSun = true } = {}) {
       sky.material.uniforms.top.value.set(top); sky.material.uniforms.bottom.value.set(bottom);
       scene.fog.color.set(bottom); renderer.setClearColor(bottom);
-      sunDisc.visible = top === '#5fa8ff';
+      hemi.color.set(hemiSky); hemi.groundColor.set(hemiGround); sun.color.set(sunColor);
+      sunDisc.visible = showSun;
     },
     render() { renderer.render(scene, camera); },
   };

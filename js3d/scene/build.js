@@ -63,6 +63,7 @@ export class Builder {
 
 const BOX = new THREE.BoxGeometry(1, 1, 1);
 export const LAMBERT = new THREE.MeshLambertMaterial({ vertexColors: true });
+LAMBERT.userData.shared = true; // wird von Insel, Häusern und Arena gemeinsam benutzt
 
 // Text als Schild (Canvas-Textur, keine Schriftdateien: Systemschrift).
 export function textSprite(lines, { width = 512, height = 192, bg = '#1f2937', fg = '#ffffff', accent = '#facc15', scale = 4 } = {}) {
