@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vlogvilla</title>
+<meta name="description" content="Vlogvilla: Mach Videos, sammle Abonnenten und zieh vom Gartenhäuschen bis ins Sternenschloss.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏡</text></svg>">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/scenes.css">
+</head>
+<body>
+<div id="app">
+  <header class="hud" id="hud" hidden>
+    <div class="brand-row">
+      <div class="brand">🏡 Vlog<span>villa</span></div>
+      <div class="pills"><span class="pill" id="hudHouse"></span><span class="pill gems" id="hudGems">💎 0</span></div>
+    </div>
+    <div class="stat money">
+      <span class="label">💰 Geld</span>
+      <span class="val" id="hudMoney">0 €</span>
+      <span class="rate" id="hudMoneyRate">+0 €/s</span>
+    </div>
+    <div class="stat subs">
+      <span class="label">👥 Abonnenten</span>
+      <span class="val" id="hudSubs">0</span>
+      <span class="rate" id="hudSubsRate">0 Videos</span>
+    </div>
+  </header>
+  <nav class="nav" id="nav" aria-label="Hauptnavigation" hidden></nav>
+  <main id="scene"></main>
+</div>
+<div id="overlays"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<noscript><p style="padding:16px">Vlogvilla braucht JavaScript. Bitte schalte es im Browser ein.</p></noscript>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
