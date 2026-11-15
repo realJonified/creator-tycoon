@@ -10,7 +10,12 @@
 //   spawn, portal, walkRadius  Startpunkt, Portal (Weltkarte), begehbarer Radius
 //   sky                        Himmel- und Lichtstimmung
 //   houses                     Häuser: Position, Preis, Grösse, Typ, Farben (Reihenfolge = Kaufreihenfolge)
-//   npcPaths                   Wege der NPC-YouTuber (Wegpunkte), folgt in Etappe 3
+//   npcPaths                   NPC-YouTuber: Name, Farben, Abos am Anfang, Wachstum pro Spielstunde,
+//                              Tempo und Weg (Wegpunkte [x, z], wird als Schleife abgelaufen)
+// Wegpunkte auf einem Kreis (für Rundwege). dir = 1 gegen, -1 mit dem Uhrzeigersinn.
+const circle = (r, n, start = 0, dir = 1, cx = 0, cz = 0) =>
+  Array.from({ length: n }, (_, i) => { const a = start + dir * (i / n) * Math.PI * 2; return [+(cx + Math.cos(a) * r).toFixed(2), +(cz + Math.sin(a) * r).toFixed(2)]; });
+
 export const MAPS = [
   {
     id: 'bucht', name: 'Kanalbucht', icon: '🏝️', theme: 'Sonnige Insel mit Strand',
@@ -24,7 +29,16 @@ export const MAPS = [
       { id: 'strand3', name: 'Muschelvilla',   size: 160, price: 5e6, x: -60, z: 14,  rot: Math.PI / 2, wall: '#ffffff', roof: '#4c9be8', floors: 2, kind: 'haus' },
       { id: 'strand4', name: 'Leuchtturmhaus', size: 230, price: 5e7, x: -56, z: 34,  rot: Math.PI / 2, wall: '#f3f0ea', roof: '#d1495b', floors: 2, kind: 'turm' },
     ],
-    npcPaths: [],
+    // Kleine Kanäle (Hunderte bis Hunderttausende Abos)
+    npcPaths: [
+      { id: 'mia',   name: 'Muschelmia',      shirt: '#f472b6', hair: '#7c2d12', subs: 1200,   growth: 0.04,  speed: 1.6, path: circle(11.2, 10, 0, 1) },
+      { id: 'kalle', name: 'Klötzchenkalle',  shirt: '#facc15', hair: '#111827', subs: 48000,  growth: 0.02,  speed: 1.9, path: circle(11.2, 10, Math.PI, -1) },
+      { id: 'brezel', name: 'Brezel-Bruno',   shirt: '#a16207', hair: '#f5d0a9', subs: 7300,   growth: 0.03,  speed: 1.5, path: [[15, 1.6], [44, 1.6], [44, -1.6], [15, -1.6]] },
+      { id: 'tante', name: 'Tante Tutorial',  shirt: '#8b5cf6', hair: '#d1d5db', subs: 210000, growth: 0.015, speed: 1.2, path: [[1.6, -15], [1.6, -30], [-1.6, -30], [-1.6, -15]] },
+      { id: 'socke', name: 'Sockensammler Sam', shirt: '#22c55e', hair: '#fde047', subs: 830,  growth: 0.05,  speed: 1.7, path: [[-15, 1.6], [-45, 1.6], [-46, 22], [-46, -22], [-45, -1.6], [-15, -1.6]] },
+      { id: 'lava',  name: 'Lavalina',        shirt: '#ef4444', hair: '#111827', subs: 95000,  growth: 0.02,  speed: 1.4, path: [[-68, -22], [-71, 0], [-68, 24], [-71, 0]] },
+      { id: 'quinn', name: 'Quasselquinn',    shirt: '#0ea5e9', hair: '#92400e', subs: 15500,  growth: 0.03,  speed: 1.8, path: [[2, 15], [2, 24], [-2, 24], [-2, 15]] },
+    ],
   },
   {
     // Ringinsel um eine Lagune. Mitte = Wasser. Zonen: Boden (Ring), Himmel (schwebende Insel, per
@@ -47,7 +61,17 @@ export const MAPS = [
       { id: 'segel',   name: 'Segelloft',        size: 2200, price: 2e17, x: 54,  z: 6,   rot: -Math.PI / 2,    wall: '#e6eef5', roof: '#264653', floors: 3, kind: 'block' },
       { id: 'palast',  name: 'Lagunenpalast',    size: 3300, price: 2e18, x: 38,  z: 38,  rot: -Math.PI * 0.75, wall: '#fff3cf', roof: '#e9c46a', floors: 3, kind: 'villa' },
     ],
-    npcPaths: [],
+    // Grosse Kanäle (Millionen bis fast eine Milliarde Abos)
+    npcPaths: [
+      { id: 'wanda',  name: 'Wellenwanda',     shirt: '#06b6d4', hair: '#fef3c7', subs: 12e6,  growth: 0.02,  speed: 1.6, path: circle(34.5, 14, 0, 1) },
+      { id: 'kapitaen', name: 'Kapitän Klick', shirt: '#1e3a8a', hair: '#e5e7eb', subs: 340e6, growth: 0.01,  speed: 1.3, path: circle(34.5, 14, Math.PI, -1) },
+      { id: 'delfina', name: 'Delfina Dreh',   shirt: '#ec4899', hair: '#1f2937', subs: 58e6,  growth: 0.015, speed: 1.8, path: circle(64, 18, 0.4, 1) },
+      { id: 'blubb',  name: 'Blubbert',        shirt: '#84cc16', hair: '#4a2c1a', subs: 4.2e6, growth: 0.03,  speed: 1.5, path: [[1.6, 30], [1.6, 54], [-1.6, 54], [-1.6, 30]] },
+      { id: 'sven',   name: 'Sternfisch Sven', shirt: '#f97316', hair: '#fde047', subs: 870e6, growth: 0.005, speed: 1.1, path: circle(64, 18, Math.PI + 0.4, -1) },
+      { id: 'koralle', name: 'Korallenkiki',   shirt: '#fb7185', hair: '#7c2d12', subs: 23e6,  growth: 0.02,  speed: 1.7, path: [[-30, 30], [-44, 18], [-46, -10], [-30, -30], [-44, 18]] },
+      { id: 'moewe',  name: 'Möwenmax',        shirt: '#e5e7eb', hair: '#111827', subs: 7.5e6, growth: 0.025, speed: 2.0, path: [[30, 30], [46, 14], [46, -12], [30, -28], [46, 14]] },
+      { id: 'tide',   name: 'Tidentilda',      shirt: '#a855f7', hair: '#f5d0a9', subs: 150e6, growth: 0.012, speed: 1.4, path: [[-12, 40], [12, 40], [18, 50], [-18, 50]] },
+    ],
   },
   {
     id: 'frost', name: 'Frostgipfel', icon: '🏔️', theme: 'Verschneite Berge (Gerüst)',

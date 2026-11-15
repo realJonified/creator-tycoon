@@ -2,6 +2,7 @@
 // Spiellogik läuft mit festem Zeitschritt (1/60 s), gezeichnet wird so oft der Browser kann.
 import { createEngine, isTouch } from './scene/engine.js';
 import { buildMap } from './scene/maps/index.js';
+import { createNpcs } from './scene/npcs.js';
 import { buildInterior } from './scene/interior.js';
 import { buildArena } from './scene/arena.js';
 import { createPlayer } from './scene/player.js';
@@ -56,8 +57,13 @@ const buttonQueue = [];
 
 // Immer nur eine Map: alte entsorgen, neue bauen, dazwischen Ladebildschirm.
 const maps = createMapManager({
-  build: id => buildMap(engine, S, findMap(id)),
-  dispose: inst => inst.dispose(),
+  build: id => {
+    const m = findMap(id), w = buildMap(engine, S, m);
+    // NPC-YouTuber gehören zur Map: Abozahl wächst mit der gespeicherten Spielzeit
+    w.npcs = createNpcs(engine, m, () => S.stats.seconds / 3600, w.group);
+    return w;
+  },
+  dispose: inst => { inst.npcs?.dispose(); inst.dispose(); },
   async onLoading(on, id) {
     const el = $('loading');
     if (on) {
@@ -206,6 +212,7 @@ function promptFor(t) {
     case 'pad': return [t.to.zone === 'sky' ? '🚀 Sprungpad: hoch zur Wolkeninsel' : '🪂 Sprungpad: hinunter'];
     case 'dive': return ['🤿 Abtauchen zum Lagunengrund'];
     case 'surface': return ['🫧 Auftauchen'];
+    case 'npc': return [`👋 Mit ${t.name} reden`];
     case 'house': {
       if (ownsHouse(S, t.house.id)) return [`🏠 ${t.house.name} betreten`];
       const nh = nextHouse(S);
@@ -228,6 +235,7 @@ function use() {
       break;
     }
     case 'pad': case 'dive': case 'surface': startTransit(trigger); break;
+    case 'npc': world.npcs.talk(trigger.npc, player.pos); audio.play('good'); break;
     case 'house':
       if (ownsHouse(S, trigger.house.id)) { audio.play('nav'); enterHouse(trigger.house.id); }
       else if (nextHouse(S)?.id === trigger.house.id) openBuyHouse(panels, ctx, trigger.house);
@@ -293,6 +301,7 @@ function logic(dt) {
   const mv = input.read();
   if (mode === 'transit') stepTransit(dt);
   else if (mode === 'world') { const Z = curZone(); player.update(dt, mv, mv.run, rig.yaw, Z.colliders, Z.bounds); }
+  if (mode === 'world' || mode === 'transit') world.npcs?.step(dt, player.pos);
   else if (mode === 'interior') { player.update(dt, mv, mv.run, rig.yaw, interior.colliders, null); interior.clamp(player.pos); }
   else if (mode === 'arena') {
     player.update(dt, mv, mv.run, rig.yaw, arena.colliders, arena.bounds);
@@ -307,7 +316,7 @@ function logic(dt) {
     bossHud.render(fight);
   }
   panels.update(dt);
-  const triggers = mode === 'world' ? world.triggers.filter(t => (t.zone || 'ground') === zone) : mode === 'interior' ? interior.triggers : [];
+  const triggers = mode === 'world' ? [...world.triggers, ...(world.npcs?.triggers() || [])].filter(t => (t.zone || 'ground') === zone) : mode === 'interior' ? interior.triggers : [];
   trigger = panels.isOpen ? null : nearestTrigger(player.pos, triggers);
   if (!panels.isOpen && buttonQueue.length && mode !== 'arena') openButtonWon(panels, buttonQueue.shift());
 }
@@ -336,6 +345,7 @@ function frame(now, fallback = false) {
   if (mode === 'world' || mode === 'start' || mode === 'transit') {
     world.updatePortal?.(time, portalIsOpen(S), portalIsOpen(S) ? `OFFEN ${mmss(S.portal.open)}` : mmss(S.portal.in));
     world.update?.(time, dt);
+    world.npcs?.render();
   }
   if (mode === 'arena' && fight) arena.update(dt, time, player.pos, fight.bossHp / 150);
   engine.render();

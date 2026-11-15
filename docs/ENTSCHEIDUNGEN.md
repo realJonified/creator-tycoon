@@ -26,6 +26,16 @@ Eine Zeile pro Annahme, die ich ohne Rückfrage getroffen habe.
 - Speichertest mit echter Map 2 (10 Wechsel Kanalbucht ↔ Wolkenlagune): Geometrien bleiben bei 38/35, Texturen bei 3/9, Shader-Programme bei 15, Objekte in der Szene bei 8. Der JS-Heap pendelte zwischen 11 und 28 MB und lag am Ende bei 16 MB.
 - Für die Unit-Tests gibt es eine kleine Canvas-Attrappe. So laufen die echten Bau-Funktionen aller Maps in Node und lassen sich auf vollständiges Entsorgen prüfen.
 
+### Etappe 3: NPC-YouTuber
+- Pro fertiger Map gibt es 7 (Map 1) bzw. 8 (Map 2) NPCs, definiert in `maps.js` unter `npcPaths`: Name, Farben, Abos am Anfang, Wachstum pro Spielstunde, Tempo und Weg. Alle Namen sind erfunden (Muschelmia, Brezel-Bruno, Wellenwanda, Kapitän Klick …).
+- Abozahlen: Map 1 von 830 bis 210.000, Map 2 von 4,2 Mio. bis 870 Mio. Sie wachsen um 0,5–5 % pro Spielstunde und werden aus der gespeicherten Spielzeit berechnet. Es braucht also kein neues Feld im Spielstand, und die Zahl springt nach dem Neuladen nicht zurück.
+- Wege: Wegpunkte als Schleife (Rundwege per Kreis-Hilfsfunktion), gerade Strecken, 1,2 s Pause an jedem Wegpunkt, kein Pathfinding. NPCs gehen durch Hindernisse hindurch und blockieren den Spieler nicht.
+- Grafik: Alle NPCs einer Map teilen sich 8 InstancedMeshes (Beine, Körper, Arme, Kopf, Haare, Augen), also 8 Draw-Calls unabhängig von der Anzahl. Animation nur durch Bein- und Armschwung, beim Reden winkt der rechte Arm.
+- Namensschilder: ein gemeinsamer Canvas-Atlas (eine Zeile pro NPC). Jedes Schild ist ein Ausschnitt mit derselben Bildquelle (eine GPU-Textur). Der Atlas wird alle 10 s Spielzeit neu gezeichnet. Schilder sind nur bis 32 m sichtbar.
+- NPCs ausserhalb der Sichtweite (höchstens 70 m bzw. 45 % der Kamera-Sichtweite) werden ausgeblendet und bewegen sich nicht. Im Haus und in der Arena ist die ganze Map samt NPCs unsichtbar und pausiert.
+- Reden: In der Nähe (unter 3,2 m) erscheint „Mit … reden“ (E oder Knopf). Der NPC bleibt 3,5 s stehen, dreht sich zum Spieler, winkt und sagt einen von 10 Sätzen in einer Sprechblase. Es gibt nur eine Sprechblase pro Map.
+- Draw-Calls mit NPCs: Map 1 etwa 52, Map 2 etwa 53 (vorher 39 bzw. 44).
+
 ## 3D-Welt „Kanalbucht“ (Branch welt-v1)
 - Der Branch `welt-v1` baut auf `ausbau` (Vlogvilla) auf, weil das der neueste Stand war. „Klassik“ ist deshalb Vlogvilla, nicht die allererste Version.
 - Die 3D-Welt liegt auf `index.html`, das 2D-Spiel auf `klassik.html`. Beide verlinken sich gegenseitig (Startbild und Menü).
