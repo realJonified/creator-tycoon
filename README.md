@@ -1,8 +1,66 @@
-# 🏡 Vlogvilla
+# 🏝️ Kanalbucht
 
-Ein Video-Creator-Simulator im Browser: Starte im Gartenhäuschen mit einem alten Rechner, mach Videos, sammle Abonnenten und zieh um, bis du im Sternenschloss wohnst.
+Eine 3D-Insel im Browser: Lauf herum, mach in deiner Wohnung Videos, kauf PC-Teile und Häuser und besiege alle 5 Minuten den Glitchgolem hinter dem Portal. Einzelspieler, ohne Konto, gespeichert wird nur im Browser.
 
-## 👉 [Jetzt spielen!](https://realjonified.github.io/creator-tycoon/)
+## 👉 [Jetzt spielen!](https://realjonified.github.io/creator-tycoon/) · [Klassik (2D)](https://realjonified.github.io/creator-tycoon/klassik.html)
+
+## So spielst du
+| | PC | Handy |
+|---|---|---|
+| Laufen | W A S D oder Pfeiltasten, Shift = rennen | Joystick (linke Bildschirmhälfte) |
+| Umsehen | Maus mit gedrückter Taste ziehen, Mausrad = Zoom | rechte Bildschirmhälfte wischen |
+| Benutzen | E | Knopf rechts |
+| Menü | Esc · F3 = FPS-Anzeige | ☰ oben rechts |
+
+- **Wohnung (Norden):** Du startest in einer kleinen Wohnung mit 50 m², schlechtem PC und schlechtem WLAN. Am PC machst du Videos.
+- **Video:** Wähle ein Spiel (sieben erfundene Spiele, von *Kugelkönig* bis *Nebelpiraten*), drück die Buchstaben rechtzeitig, dann folgt der Schnitt (viel tippen), dann der Upload (je nach WLAN). Daraus werden Aufrufe, Geld und Abos.
+- **Bitbazar (rechts vom Kreisel):** Prozessor, Grafikkarte, Maus, Tastatur, Monitor und WLAN-Router. Jeder Kauf macht das nächste Teil teurer und das Video besser.
+- **Häuser:** Am Strand und auf der Insel verteilt. Das zweite kostet 50.000 €, das dritte 500.000 €, danach jeweils das Zehnfache. Gekauft wird an der Haustür.
+- **Portal (Kreisel):** Alle 5 Minuten für 60 Sekunden offen. Drinnen kämpfst du gegen den Glitchgolem (150 Leben). Deine Waffe schiesst von allein, du weichst den roten Kreisen aus. Bei einem Sieg gibt es eine Kiste: Gewöhnlich 72 %, Selten 22 %, Episch 5 %, Legendär 1 %.
+- **Kanalknöpfe:** Bei 100.000 · 1 Mio. · 10 Mio. · 100 Mio. · 500 Mio. · 1 Mrd. · 50 Mrd. · 500 Mrd. · 1 Bio. Abos hängt ein neuer Knopf an deiner Wand.
+- **Alter Spielstand:** Beim ersten Start übernimmt die Insel Geld und Abos aus dem 2D-Spiel (`creatorTycoonSave_v1`, `_v2` oder `vlogvillaSave_v3`).
+
+## Grafik und Leistung
+- Einstellungen → Grafik: **Niedrig, Mittel, Hoch** oder **Automatisch**. Automatisch startet am PC mit Mittel und am Handy mit Niedrig und schaltet bei zu wenig FPS herunter.
+- Die Pixel-Ratio ist höchstens 1,5. Es gibt ein Licht mit Schatten und Nebel in der Ferne. Gleiche Objekte sind Instanzen, auf der Insel sind es rund 40 Draw-Calls.
+- Die Spiellogik läuft mit festem Zeitschritt (1/60 s) und ist so auf jedem Gerät gleich schnell.
+
+## Ordner der 3D-Welt
+```
+index.html               3D-Welt (Kanalbucht)
+klassik.html             2D-Spiel (Vlogvilla), siehe unten
+vendor/three.module.min.js  three.js r170 (MIT, lokal, kein CDN)
+css/welt.css             Oberfläche der 3D-Welt
+js3d/main.js             Start, Orte (Insel, Haus, Arena), Spielschleife
+js3d/data/               balance.js (Zahlen), content.js (Spiele, PC-Teile, Häuser, Knöpfe, Kiste)
+js3d/core/               Logik ohne Grafik: economy, video, boss, rewards, physics, save
+js3d/scene/              three.js: engine (Licht, Grafikstufen), world, player, camera, input, interior, arena, build
+js3d/ui/                 hud, menu, shop-ui, video-ui, boss-ui
+tests/welt.test.js, tests/physics.test.js   Tests der 3D-Logik
+```
+
+## Lokal testen
+```bash
+node tools/server.js
+```
+Danach im Browser http://localhost:8123 öffnen. Ein Doppelklick auf die Datei reicht nicht, weil Browser Module nur über einen Server laden.
+
+```bash
+node --test
+```
+
+In der Browser-Konsole gibt es `kanalbucht`, zum Beispiel `kanalbucht.openPortal()`, `kanalbucht.S.money = 1e6` oder `kanalbucht.enterArena()`.
+
+## Auf GitHub Pages veröffentlichen
+1. Branch in `main` mergen (oder in den Repo-Einstellungen unter **Settings → Pages** den Branch wählen, der veröffentlicht werden soll).
+2. **Settings → Pages → Build and deployment**: „Deploy from a branch“, Branch `main`, Ordner `/ (root)`.
+3. Nach 1 bis 2 Minuten läuft die Seite unter `https://<name>.github.io/creator-tycoon/`. Es gibt keinen Build-Schritt, die Dateien werden so ausgeliefert, wie sie im Repo liegen (`.nojekyll` liegt bei).
+
+---
+
+# 🕹️ Klassik: Vlogvilla (2D)
+
+Ein Video-Creator-Simulator im Browser: Starte im Gartenhäuschen mit einem alten Rechner, mach Videos, sammle Abonnenten und zieh um, bis du im Sternenschloss wohnst. Erreichbar über `klassik.html` oder das Menü der 3D-Welt.
 
 ## So spielst du
 1. **Thema wählen:** Acht Fantasie-Spiele, von *Schleimrennen* bis *Robo-Fussball*. Jedes hat eigene Zuschauer und wird ab einer bestimmten Abo-Zahl frei.
@@ -20,7 +78,7 @@ Aus Punkten, Qualität und Thema entstehen Aufrufe, Geld 💰, Abos 👥 und Juw
 - Tastatur: `1`–`6` wechselt die Szene (nicht während eines Videos), `Esc` schliesst ein Fenster.
 
 ## Szenen
-| Szene | Datei | Zweck |
+| Szene (Klassik) | Datei | Zweck |
 |---|---|---|
 | Start | `js/scenes/titel.js` | Startbild, Spielen, Neues Spiel, Offline-Gewinn |
 | Tutorial | `js/scenes/tutorial.js` | Vier kurze Schritte |
@@ -34,7 +92,7 @@ Aus Punkten, Qualität und Thema entstehen Aufrufe, Geld 💰, Abos 👥 und Juw
 
 ## Ordnerstruktur
 ```
-index.html          Hülle: Kopfzeile, Navigation, Szenen-Bühne, Overlays
+klassik.html        Hülle: Kopfzeile, Navigation, Szenen-Bühne, Overlays
 css/                base.css (Farben, Layout, Bausteine), scenes.css (Szenen)
 js/main.js          Start: lädt den Spielstand und verbindet alles
 js/core/            Logik ohne DOM, läuft auch in Node

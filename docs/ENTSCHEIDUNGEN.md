@@ -2,6 +2,27 @@
 
 Eine Zeile pro Annahme, die ich ohne Rückfrage getroffen habe.
 
+## 3D-Welt „Kanalbucht“ (Branch welt-v1)
+- Der Branch `welt-v1` baut auf `ausbau` (Vlogvilla) auf, weil das der neueste Stand war. „Klassik“ ist deshalb Vlogvilla, nicht die allererste Version.
+- Die 3D-Welt liegt auf `index.html`, das 2D-Spiel auf `klassik.html`. Beide verlinken sich gegenseitig (Startbild und Menü).
+- three.js r170 als eine einzige Datei `vendor/three.module.min.js` (MIT, Lizenz liegt daneben). r170, weil es noch ohne Zusatzdateien auskommt. Es gibt keine weiteren Abhängigkeiten.
+- Die 3D-Welt speichert unter eigenem Schlüssel `kanalbuchtSave_v1` mit Versionsnummer. Beim ersten Start übernimmt sie Geld, Abos und Videos aus dem neuesten 2D-Spielstand (`vlogvillaSave_v3`, sonst `creatorTycoonSave_v2`, sonst `creatorTycoonSave_v1`). Die 2D-Stände bleiben unberührt, Klassik spielt mit ihrem eigenen Stand weiter.
+- Die Kamera ist in der dritten Person, weil man so Figur, Häuser und die Angriffe des Bosses besser sieht. Umsehen geht mit gedrückter Maustaste statt Pointer-Lock, das funktioniert überall ohne Rückfrage des Browsers.
+- Innenräume sind Puppenhaus-Ansichten: Wände sind nach innen gerichtete Flächen, von draussen unsichtbar. Es gibt kein Dach, so verdeckt nichts die Kamera.
+- Statische Teile (Boden, Häuser, Shop, Portal) sind zu wenigen Meshes mit Vertexfarben zusammengefügt. Bäume, Palmen, Laternen, Steine und Blumen sind Instanzen. Auf der Insel sind es rund 40 Draw-Calls und 34.000 Dreiecke.
+- Grafikstufen: Niedrig (Pixel-Ratio 1, keine Echtzeit-Schatten, nur ein runder Schatten unter der Figur, Sicht 120 m, ohne Blumen und Wolken), Mittel (1,25, Schatten 1024, 180 m), Hoch (1,5, Schatten 2048, 260 m). „Automatisch“ startet am PC mit Mittel und am Handy mit Niedrig und schaltet herunter, wenn 3 Sekunden lang weniger als 45 FPS (PC) bzw. 28 FPS (Handy) laufen. Hochschalten tut sie nie.
+- Kantenglättung (Antialias) ist am Handy aus, weil sie dort am meisten kostet. Sie lässt sich nur beim Start festlegen.
+- Liefert der Browser keine Bild-Takte, obwohl die Seite sichtbar ist, hält ein Ersatz-Takt (alle 100 ms) das Spiel am Laufen. Ein wirklich versteckter Tab bleibt stehen und bekommt beim Zurückkommen den Offline-Gewinn.
+- Die Tageszeit ist fester Nachmittag (Sonne von Südwesten, warmer Horizont). Die Arena hat eigene, violette Farben.
+- Häuser kauft man der Reihe nach an ihrer Haustür. Jedes Haus bringt Aufrufe × 2,5 und eine grössere, besser eingerichtete Wohnung (50 m² bis 3.300 m², ab 1.000 m² wächst der Raum nicht mehr mit, damit er überschaubar bleibt).
+- PC-Teile haben keine Höchststufe: Preis = Grundpreis × Wachstum ^ Stufe. Der WLAN-Router gehört auch in den Shop, weil der Upload vom WLAN abhängt.
+- Portal: 5 Minuten Countdown, dann 60 Sekunden offen. Der Countdown läuft nur, solange gespielt wird (nicht offline).
+- Boss „Glitchgolem“: 150 Leben, die Waffe macht alle 0,35 s 3 Schaden (Sieg nach gut 17 s), alle 2,6 s erscheint ein Zielkreis unter der Figur (jeder dritte Angriff mit zwei zusätzlichen Kreisen). Er schlägt nach 1,1 s ein. Drei Treffer, und man verliert.
+- Kiste: Gewöhnlich 72 %, Selten 22 %, Episch 5 %, Legendär 1 %. Die Belohnung ist Geld im Wert von 2/6/20/80 normalen Videos, ab Selten gibt es Abos dazu, ab Episch einen dauerhaften Glücksbringer (+10 % bzw. +50 % Aufrufe).
+- Play-Buttons heissen „Kanalknöpfe“: Platten mit Stern-Emblem in eigenen Farben (Silber bis Kosmos). Sie hängen an der Ostwand im Haus und geben je +25 % Aufrufe.
+- Wer mit einem grossen 2D-Spielstand kommt (z. B. 1 Mrd. € aus Vlogvilla), kann sofort viele Häuser kaufen. Das ist so gewollt, weil „nichts geht verloren“ gilt.
+- Für die 3D-Welt gibt es kein Balancing-Skript, nur Unit-Tests. Die Zahlen sind von Vlogvilla übernommen und angepasst, aber nicht über Stunden simuliert.
+
 ## Allgemein
 - Der Name ist **Vlogvilla**, weil das Spiel ums Umziehen in immer grössere Häuser geht. Alle Namen von Spielen, Geräten, Häusern, Boards und Awards sind selbst erfunden.
 - Grafik nur als SVG, CSS und Emoji, die direkt im Code erzeugt werden (`js/ui/art.js`). Es gibt keine Bilddateien, Fonts oder CDNs.
