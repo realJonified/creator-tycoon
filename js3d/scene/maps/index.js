@@ -4,9 +4,13 @@
 // Pflicht: ein Auslöser { kind: 'portal' } – darüber kommt man immer zurück zur Weltkarte.
 import { buildBucht } from '../world.js';
 import { buildBaustelle } from './baustelle.js';
+import { buildLagune } from './lagune.js';
+import { buildFrost } from './frost.js';
 
 export const BUILDERS = {
   bucht: buildBucht,
+  lagune: buildLagune,
+  frost: buildFrost,
   baustelle: buildBaustelle,
 };
 

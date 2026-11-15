@@ -69,15 +69,14 @@ test('Häuser gehören zu ihrer Map, der Hausbonus gilt über alle Maps', () => 
   assert.equal(bestHouseIndex(S), 1);
   assert.equal(houseMult(S), 2.5);
   // Häuser einer nicht freigeschalteten Map kann man nicht kaufen
-  const fake = { id: 'test9', map: 'lagune', price: 1 };
-  ALL_HOUSES.push(fake); findMap('lagune').houses.push(fake);
-  try {
-    assert.equal(buyHouse(S, 'test9'), false);
-    S.maps.push('lagune'); S.houses.lagune = [];
-    assert.equal(nextHouse(S, 'lagune').id, 'test9');
-    assert.equal(buyHouse(S, 'test9'), true);
-    assert.deepEqual(S.houses.lagune, ['test9']);
-  } finally { ALL_HOUSES.pop(); findMap('lagune').houses.pop(); }
+  S.money = 1e13;
+  assert.equal(buyHouse(S, 'pfahl'), false);
+  S.maps.push('lagune'); S.houses.lagune = [];
+  assert.equal(nextHouse(S, 'lagune').id, 'pfahl');
+  assert.equal(nextHouse(S, 'bucht').id, 'strand2', 'jede Map hat ihre eigene Reihenfolge');
+  assert.equal(buyHouse(S, 'pfahl'), true);
+  assert.deepEqual(S.houses.lagune, ['pfahl']);
+  assert.equal(houseMult(S), Math.pow(2.5, ALL_HOUSES.findIndex(h => h.id === 'pfahl')), 'Bonus nach globaler Reihenfolge');
 });
 
 test('Migration v1 → v2: Häuser pro Map, Kaufpreis für weggefallene Häuser zurück, nichts verloren', () => {

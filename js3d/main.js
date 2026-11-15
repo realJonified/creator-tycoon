@@ -47,8 +47,11 @@ const hud = createHud({ onUse: () => use(), onMenu: () => openMenu(panels, ctx) 
 const panels = createPanels($('panels'));
 const bossHud = createBossHud();
 
-let mode = 'start';          // start | loading | world | interior | arena
+let mode = 'start';          // start | loading | world | transit | interior | arena
 let world = null, mapData = null, interior = null, fight = null, trigger = null, time = 0;
+let zone = 'ground', transit = null; // Ebene auf der Map (Boden, Wolkeninsel, Meeresgrund) und laufender Ebenenwechsel
+// Aktuelle Ebene: Höhe, Grenzen, Hindernisse. Maps ohne Ebenen haben nur den Boden.
+const curZone = () => world?.zones?.[zone] || { y: 0, bounds: { x: 0, z: 0, r: mapData.walkRadius }, colliders: world.colliders };
 const buttonQueue = [];
 
 // Immer nur eine Map: alte entsorgen, neue bauen, dazwischen Ladebildschirm.
@@ -137,14 +140,21 @@ addEventListener('keydown', e => {
 // ---------- Orte wechseln ----------
 function showWorld(on) { if (world) world.group.visible = on; }
 
+function applyZoneLook() {
+  engine.setUnderwater(false);
+  engine.setSky(mapData.sky.top, mapData.sky.bottom, mapData.sky);
+  if (curZone().underwater) engine.setUnderwater(true);
+}
+
 function enterWorld(at = null) {
   interior?.dispose(); interior = null;
   arena.group.visible = false;
   showWorld(true);
-  engine.setSky(mapData.sky.top, mapData.sky.bottom, mapData.sky);
   mode = 'world';
   const p = at || S.player;
-  player.place(p.x, p.z, (p.yaw ?? 0) + Math.PI); // Figur schaut von der Kamera weg
+  zone = p.zone && world.zones?.[p.zone] ? p.zone : 'ground';
+  applyZoneLook();
+  player.place(p.x, p.z, (p.yaw ?? 0) + Math.PI, curZone().y); // Figur schaut von der Kamera weg
   rig.setLimits(4, 13, 8);
   rig.setYaw(p.yaw ?? 0);
   bossHud.show(false);
@@ -155,11 +165,12 @@ function enterHouse(id, keepPos = false) {
   const keep = keepPos ? { ...player.pos } : null;
   interior?.dispose();
   showWorld(false); arena.group.visible = false;
+  engine.setUnderwater(false); engine.setSky(mapData.sky.top, mapData.sky.bottom, mapData.sky);
   interior = buildInterior(engine, S, houseIndex(id));
   S.home = id;
   mode = 'interior';
   const sp = keep || interior.spawn;
-  player.place(sp.x, sp.z, Math.PI);
+  player.place(sp.x, sp.z, Math.PI, 0);
   rig.setLimits(3, Math.max(6, interior.size * 0.7), Math.min(7, interior.size * 0.6));
   if (!keep) rig.setYaw(0);
 }
@@ -167,10 +178,11 @@ function enterHouse(id, keepPos = false) {
 function enterArena() {
   showWorld(false); interior?.dispose(); interior = null;
   arena.reset(); arena.group.visible = true;
+  engine.setUnderwater(false);
   engine.setSky('#1e1640', '#3b2f5c', { hemiSky: '#cfc6ff', hemiGround: '#3b2f5c', sun: '#ffe0b5', showSun: false });
   mode = 'arena';
   fight = startFight();
-  player.place(arena.spawn.x, arena.spawn.z, Math.PI);
+  player.place(arena.spawn.x, arena.spawn.z, Math.PI, 0);
   rig.setLimits(6, 14, 11); rig.setYaw(0);
   bossHud.show(true); bossHud.render(fight);
   audio.play('event');
@@ -179,7 +191,8 @@ function enterArena() {
 
 function leaveArena() {
   fight = null;
-  enterWorld({ x: mapData.portal.x, z: mapData.portal.z + 4, yaw: 0 });
+  const portal = world.triggers.find(t => t.kind === 'portal');
+  enterWorld({ x: portal.x, z: portal.z + 2, yaw: 0, zone: 'ground' });
 }
 
 // ---------- Benutzen (E / Knopf) ----------
@@ -190,6 +203,9 @@ function promptFor(t) {
     case 'portal': return [portalIsOpen(S) ? '🌀 Weltkarte · Boss-Portal offen!' : '🌀 Weltkarte öffnen'];
     case 'pc': return ['🎬 Video machen'];
     case 'exit': return ['🚪 Hinausgehen'];
+    case 'pad': return [t.to.zone === 'sky' ? '🚀 Sprungpad: hoch zur Wolkeninsel' : '🪂 Sprungpad: hinunter'];
+    case 'dive': return ['🤿 Abtauchen zum Lagunengrund'];
+    case 'surface': return ['🫧 Auftauchen'];
     case 'house': {
       if (ownsHouse(S, t.house.id)) return [`🏠 ${t.house.name} betreten`];
       const nh = nextHouse(S);
@@ -208,14 +224,45 @@ function use() {
     case 'exit': {
       const h = findHouse(S.home);
       const d = world.triggers.find(t => t.id === 'haus:' + h.id);
-      enterWorld(d ? { x: d.x, z: d.z, yaw: h.rot } : null);
+      enterWorld(d ? { x: d.x, z: d.z, yaw: h.rot, zone: d.zone } : null);
       break;
     }
+    case 'pad': case 'dive': case 'surface': startTransit(trigger); break;
     case 'house':
       if (ownsHouse(S, trigger.house.id)) { audio.play('nav'); enterHouse(trigger.house.id); }
       else if (nextHouse(S)?.id === trigger.house.id) openBuyHouse(panels, ctx, trigger.house);
       else audio.play('denied');
       break;
+  }
+}
+
+// Ebenenwechsel: Sprungpad (Bogen durch die Luft), Tauchen (absinken), Auftauchen (aufsteigen).
+function startTransit(t) {
+  const target = world.zones[t.to.zone];
+  if (!target) return;
+  audio.play(t.kind === 'pad' ? 'viral' : 'nav');
+  transit = { kind: t.kind, t: 0, dur: t.kind === 'pad' ? 1.3 : 1.6, from: { x: player.pos.x, z: player.pos.z, y: player.y }, to: { ...t.to, y: target.y } };
+  mode = 'transit';
+  trigger = null;
+}
+function stepTransit(dt) {
+  const tr = transit;
+  tr.t = Math.min(1, tr.t + dt / tr.dur);
+  const k = tr.t < 0.5 ? 2 * tr.t * tr.t : 1 - (-2 * tr.t + 2) ** 2 / 2; // weich beschleunigen und bremsen
+  player.pos.x = tr.from.x + (tr.to.x - tr.from.x) * k;
+  player.pos.z = tr.from.z + (tr.to.z - tr.from.z) * k;
+  const arc = tr.kind === 'pad' ? Math.sin(tr.t * Math.PI) * 9 : 0;
+  player.y = tr.from.y + (tr.to.y - tr.from.y) * k + arc;
+  player.root.position.set(player.pos.x, player.y, player.pos.z);
+  // Unterwasser-Nebel umschalten, sobald die Figur durch die Wasseroberfläche geht
+  engine.setUnderwater(false);
+  if (player.y < -0.5) { engine.setUnderwater(true); } else engine.setSky(mapData.sky.top, mapData.sky.bottom, mapData.sky);
+  if (tr.t >= 1) {
+    zone = tr.to.zone; transit = null; mode = 'world';
+    player.y = curZone().y;
+    applyZoneLook();
+    if (zone === 'sky') hud.toast('☁️ Willkommen auf der Wolkeninsel!');
+    if (zone === 'under') hud.toast('🫧 Du bist am Lagunengrund. Blubb!');
   }
 }
 
@@ -244,7 +291,8 @@ function logic(dt) {
   if (p === 'close' && mode !== 'arena') hud.toast('🌀 Das Boss-Portal hat sich geschlossen.');
 
   const mv = input.read();
-  if (mode === 'world') player.update(dt, mv, mv.run, rig.yaw, world.colliders, { x: 0, z: 0, r: mapData.walkRadius });
+  if (mode === 'transit') stepTransit(dt);
+  else if (mode === 'world') { const Z = curZone(); player.update(dt, mv, mv.run, rig.yaw, Z.colliders, Z.bounds); }
   else if (mode === 'interior') { player.update(dt, mv, mv.run, rig.yaw, interior.colliders, null); interior.clamp(player.pos); }
   else if (mode === 'arena') {
     player.update(dt, mv, mv.run, rig.yaw, arena.colliders, arena.bounds);
@@ -259,7 +307,7 @@ function logic(dt) {
     bossHud.render(fight);
   }
   panels.update(dt);
-  const triggers = mode === 'world' ? world.triggers : mode === 'interior' ? interior.triggers : [];
+  const triggers = mode === 'world' ? world.triggers.filter(t => (t.zone || 'ground') === zone) : mode === 'interior' ? interior.triggers : [];
   trigger = panels.isOpen ? null : nearestTrigger(player.pos, triggers);
   if (!panels.isOpen && buttonQueue.length && mode !== 'arena') openButtonWon(panels, buttonQueue.shift());
 }
@@ -283,11 +331,11 @@ function frame(now, fallback = false) {
   if (n === 8) acc = 0;
   time += dt;
 
-  rig.update(dt, player.pos, mode === 'world' ? (dx, dz, d) => clearDistance(player.pos, dx, dz, d, world.colliders) : null);
+  rig.update(dt, { x: player.pos.x, z: player.pos.z, y: player.y }, mode === 'world' ? (dx, dz, d) => clearDistance(player.pos, dx, dz, d, curZone().colliders) : null);
   engine.followShadow(player.pos);
-  if (mode === 'world' || mode === 'start') {
+  if (mode === 'world' || mode === 'start' || mode === 'transit') {
     world.updatePortal?.(time, portalIsOpen(S), portalIsOpen(S) ? `OFFEN ${mmss(S.portal.open)}` : mmss(S.portal.in));
-    world.update?.(time);
+    world.update?.(time, dt);
   }
   if (mode === 'arena' && fight) arena.update(dt, time, player.pos, fight.bossHp / 150);
   engine.render();
@@ -297,7 +345,7 @@ function frame(now, fallback = false) {
     hud.render(S);
     const [label, enabled] = promptFor(trigger);
     hud.prompt(label ? (isTouch() ? label : `[E] ${label}`) : null, enabled !== false);
-    if (mode === 'world') S.player = { x: player.pos.x, z: player.pos.z, yaw: rig.yaw };
+    if (mode === 'world') S.player = { x: player.pos.x, z: player.pos.z, yaw: rig.yaw, zone };
   }
   slow += dt;
   if (slow > 0.5) {
@@ -340,7 +388,7 @@ addEventListener('pagehide', () => { if (mode !== 'start') ctx.persist(); });
 // Zum Testen in der Konsole
 globalThis.kanalbucht = {
   get S() { return S; }, ctx, engine, player, rig, input, panels, maps,
-  get world() { return world; }, get mode() { return mode; }, get fight() { return fight; }, get trigger() { return trigger; },
+  get world() { return world; }, get mode() { return mode; }, get zone() { return zone; }, get fight() { return fight; }, get trigger() { return trigger; },
   use, enterHouse, enterArena, enterWorld, travel,
   // Nur zum Testen: Map laden, auch wenn sie noch gesperrt ist
   async forceMap(id) { if (!S.maps.includes(id)) S.maps.push(id); await travel(id); },

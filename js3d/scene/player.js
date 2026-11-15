@@ -41,12 +41,15 @@ export function createPlayer(scene) {
   scene.add(root);
 
   const pos = { x: 0, z: 0 };
+  let y = 0; // Höhe der Ebene, auf der die Figur steht
   let facing = 0, phase = 0, speedNow = 0;
 
   return {
     root, pos, radius: RADIUS,
     get facing() { return facing; },
-    place(x, z, yaw) { pos.x = x; pos.z = z; facing = yaw; root.position.set(x, 0, z); root.rotation.y = yaw; },
+    get y() { return y; },
+    set y(v) { y = v; root.position.y = v; },
+    place(x, z, yaw, height = y) { pos.x = x; pos.z = z; facing = yaw; y = height; root.position.set(x, y, z); root.rotation.y = yaw; },
     setBlob(on) { blob.visible = on; },
 
     // move = { x, y } aus Tastatur/Joystick (-1..1), camYaw = Blickrichtung der Kamera
@@ -72,7 +75,7 @@ export function createPlayer(scene) {
       legL.rotation.x = Math.sin(phase) * swing; legR.rotation.x = -Math.sin(phase) * swing;
       armL.rotation.x = -Math.sin(phase) * swing * 0.9; armR.rotation.x = Math.sin(phase) * swing * 0.9;
       body.position.y = Math.abs(Math.sin(phase)) * swing * 0.09 + (speedNow < 0.2 ? Math.sin(phase * 0.5) * 0.015 : 0);
-      root.position.set(pos.x, 0, pos.z);
+      root.position.set(pos.x, y, pos.z);
       root.rotation.y = facing;
     },
   };

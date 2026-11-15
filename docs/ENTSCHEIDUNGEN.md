@@ -15,6 +15,17 @@ Eine Zeile pro Annahme, die ich ohne Rückfrage getroffen habe.
 - Der Ladebildschirm wartet auf höchstens zwei Bild-Takte zu je 60 ms. Ohne diese Grenze blieb er in einem Hintergrund-Tab hängen.
 - Speichertest (10 Wechsel Kanalbucht ↔ Baustelle im Browser): Die GPU-Ressourcen bleiben exakt gleich, Kanalbucht immer 38 Geometrien, 3 Texturen, 16 Shader-Programme, Baustelle 23/2/12. Der JS-Heap stieg von 12 auf etwa 30 MB und blieb in den letzten vier Wechseln flach (28/31/31/30 MB). Wann der Browser aufräumt, lässt sich von der Seite aus nicht erzwingen.
 
+### Etappe 2: Map 2 „Wolkenlagune“ und Gerüst für Map 3
+- Map 2 ist eine Ringinsel um eine Lagune. Freischalten kostet 1 Billion €. Sie hat 7 Häuser (Map 1: 5), Preise vorläufig 2 Bio. € bis 2 Trill. € (× 10 pro Haus, liegen über dem Freischaltpreis). Die Feinabstimmung folgt in Etappe 5.
+- Ebenen („Zonen“) pro Map: Boden, Wolkeninsel (16 m hoch) und Lagunengrund (7 m tief). Jede Ebene hat eigene Grenzen und Hindernisse, Auslöser und Häuser gehören zu einer Ebene. Die aktuelle Ebene wird mit der Position gespeichert.
+- Zugang zur Wolkeninsel per Sprungpad (Bogenflug 1,3 s), zurück per Sprungpad auf der Insel. Zugang zum Lagunengrund per Tauchsteg (Absinken 1,6 s), zurück über den Auftauch-Ring. Benutzt wird beides mit E bzw. dem Knopf, damit man nicht aus Versehen springt.
+- Unterwasser-Effekt: blauer, dichter Nebel (1–32 m), kein Himmel, 140 aufsteigende Blasen als Partikel mit per Code erzeugter runder Textur (16 × 16 Pixel), durchsichtige Wasseroberfläche (von oben sieht man die Kuppel). Im Haus und in der Arena wird der Nebel zurückgesetzt.
+- Das Wolkenhaus nutzt ein kleineres Hausmodell, weil es auf der schwebenden Insel sonst keinen Platz hätte. Die Tiefseekuppel ist ein eigenes Modell (Glaskuppel mit Schleuse).
+- Map 3 „Frostgipfel“ ist als Gerüst angelegt: Datensatz mit Farben und Preis (`ready: false`) und Bau-Funktion `frost.js`, die bis zum Ausbau die Baustelle in Frost-Farben zeigt.
+- Die Kamera-Kollision gilt jetzt auf jeder Ebene (vorher nur am Boden).
+- Speichertest mit echter Map 2 (10 Wechsel Kanalbucht ↔ Wolkenlagune): Geometrien bleiben bei 38/35, Texturen bei 3/9, Shader-Programme bei 15, Objekte in der Szene bei 8. Der JS-Heap pendelte zwischen 11 und 28 MB und lag am Ende bei 16 MB.
+- Für die Unit-Tests gibt es eine kleine Canvas-Attrappe. So laufen die echten Bau-Funktionen aller Maps in Node und lassen sich auf vollständiges Entsorgen prüfen.
+
 ## 3D-Welt „Kanalbucht“ (Branch welt-v1)
 - Der Branch `welt-v1` baut auf `ausbau` (Vlogvilla) auf, weil das der neueste Stand war. „Klassik“ ist deshalb Vlogvilla, nicht die allererste Version.
 - Die 3D-Welt liegt auf `index.html`, das 2D-Spiel auf `klassik.html`. Beide verlinken sich gegenseitig (Startbild und Menü).

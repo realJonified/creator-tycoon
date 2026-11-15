@@ -121,6 +121,12 @@ export function createEngine(canvas) {
       hemi.color.set(hemiSky); hemi.groundColor.set(hemiGround); sun.color.set(sunColor);
       sunDisc.visible = showSun;
     },
+    // Unterwasser: blauer, dichter Nebel. Aus: Nebelweite der Grafikstufe zurück.
+    setUnderwater(on) {
+      const q = QUALITY[level];
+      if (on) { scene.fog.color.set('#1c6e96'); scene.fog.near = 1; scene.fog.far = 32; renderer.setClearColor('#1c6e96'); sky.visible = false; sunDisc.visible = false; }
+      else { scene.fog.near = q.fogNear; scene.fog.far = q.fogFar; sky.visible = true; }
+    },
     render() { renderer.render(scene, camera); },
   };
 }

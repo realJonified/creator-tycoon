@@ -63,6 +63,7 @@ export function sanitize(d, now = Date.now()) {
   S.settings.sensitivity = Math.min(3, Math.max(0.3, num(d.settings?.sensitivity, 1)));
   if (d.player && Number.isFinite(d.player.x) && Number.isFinite(d.player.z)) {
     S.player = { x: d.player.x, z: d.player.z, yaw: Number.isFinite(d.player.yaw) ? d.player.yaw : 0 };
+    if (["sky", "under"].includes(d.player.zone)) S.player.zone = d.player.zone;
   }
   S.tutorialDone = !!d.tutorialDone;
   S.last = num(d.last, now) || now;

@@ -21,8 +21,9 @@ test('Häuser auf Map 1: Wohnung 50 m² gratis, dann 50.000, 500.000 und immer �
   assert.equal(HOUSES[0].size, 50);
   assert.equal(HOUSES[1].price, 5e4);
   assert.equal(HOUSES[2].price, 5e5);
-  for (let i = 2; i < HOUSES.length; i++) near(HOUSES[i].price / HOUSES[i - 1].price, 10);
-  for (let i = 1; i < HOUSES.length; i++) assert.ok(HOUSES[i].size > HOUSES[i - 1].size, 'mehr Platz');
+  const M1 = HOUSES.filter(h => h.map === 'bucht');
+  for (let i = 2; i < M1.length; i++) near(M1[i].price / M1[i - 1].price, 10);
+  for (let i = 1; i < HOUSES.length; i++) assert.ok(HOUSES[i].size > HOUSES[i - 1].size, 'mehr Platz, auch über Maps hinweg');
 });
 
 test('PC-Teile werden mit jedem Kauf teurer und machen das Video besser', () => {

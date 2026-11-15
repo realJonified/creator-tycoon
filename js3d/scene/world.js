@@ -25,6 +25,7 @@ export function houseSize(i) { return { w: 8 + Math.min(i, 8) * 0.9, d: 7 + Math
 
 // Baut ein Haus (Tür zeigt nach lokal +z) in den Builder b, verschoben nach (x, z) und gedreht.
 export function buildHouse(b, h, i, x, z, rot) {
+  if (h.kind === 'kuppel') return buildDome(b, h, x, z, rot);
   const { w, d } = houseSize(i);
   const fh = 3, H = h.floors * fh;
   const M = (lx, ly, lz, ry = 0, sx = 1, sy = 1, sz = 1) => { const p = rotY(lx, lz, rot); return matrix(x + p.x, ly, z + p.z, rot + ry, 0, 0, sx, sy, sz); };
@@ -80,6 +81,20 @@ export function buildHouse(b, h, i, x, z, rot) {
 }
 
 // Bau-Funktion für Map 1 (Kanalbucht). map = Datensatz aus js3d/data/maps.js.
+// Glaskuppel für den Meeresgrund (Tür zeigt nach lokal +z). Liefert dieselben Masse wie buildHouse.
+export function buildDome(b, h, x, z, rot) {
+  const R = 5.5;
+  const M = (lx, ly, lz, sx = 1, sy = 1, sz = 1) => { const p = rotY(lx, lz, rot); return matrix(x + p.x, ly, z + p.z, rot, 0, 0, sx, sy, sz); };
+  b.add(new THREE.CylinderGeometry(R + 0.6, R + 0.9, 0.7, 20), '#5b6b7a', M(0, 0.35, 0));
+  b.add(new THREE.SphereGeometry(R, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2), h.wall, M(0, 0.7, 0));
+  for (let k = 0; k < 6; k++) { const a = (k / 6) * Math.PI * 2; b.add(new THREE.BoxGeometry(0.25, 0.25, 0.25), '#fde68a', M(Math.cos(a) * (R + 0.4), 0.9, Math.sin(a) * (R + 0.4))); }
+  b.add(new THREE.TorusGeometry(R * 0.7, 0.18, 6, 24), h.roof, matrix(x, 0.7 + R * 0.72, z, 0, Math.PI / 2, 0));
+  b.add(new THREE.BoxGeometry(2.4, 2.6, 3), h.roof, M(0, 1.3, R - 0.2));       // Eingangsröhre
+  b.add(new THREE.BoxGeometry(1.4, 2.1, 0.2), '#0f3b52', M(0, 1.05, R + 1.35));  // Schleusentür
+  b.add(new THREE.CylinderGeometry(0.15, 0.15, 3, 6), '#94a3b8', M(0, R + 2.2, 0)); // Antenne
+  return { w: R * 2 + 1, d: R * 2 + 1, H: R };
+}
+
 export function buildBucht(engine, S, map) {
   const HOUSES = map.houses;
   const { scene, details } = engine;
@@ -309,6 +324,7 @@ export function buildBucht(engine, S, map) {
 
   return {
     group, colliders, triggers, houseSigns, cloudMesh,
+    zones: { ground: { y: 0, bounds: { x: 0, z: 0, r: map.walkRadius }, colliders } },
     update(t) { cloudMesh.rotation.y = t * 0.004; },
     dispose() { for (const d of [fl, cloudMesh, farMesh]) { const i = details.indexOf(d); if (i >= 0) details.splice(i, 1); } return disposeObject(group); },
     updatePortal(t, open, text) {
