@@ -1,31 +1,86 @@
-// Alle Stellschrauben der 3D-Welt an einem Ort.
+// ALLE Zahlen der 3D-Welt an einem Ort: Wirtschaft, Preise, Kiste, Boss, Video.
+// Die Inhaltsdateien (content.js, maps.js) holen ihre Zahlen von hier. Nach Änderungen:
+//   node tools/balance-welt.js     (Simulation, zeigt ob die Ziele stimmen)
+//   node --test                    (u. a. Test der Balancing-Ziele)
 export const W = {
-  // Video: Aufnahme
+  // ---------- Video: Aufnahme ----------
   recordSeconds: 15,
   letterEvery: 0.7,       // Sekunden zwischen Buchstaben (× Tempo des Spiels)
   letterLife: 2.2,        // so lange bleibt ein Buchstabe stehen
   letterPoints: 10,
   comboStep: 0.05,        // +5 % pro Treffer in Folge …
   comboMax: 20,           // … höchstens +100 %
-  // Video: Schnitt
+  // ---------- Video: Schnitt ----------
   cutSeconds: 10,
   cutNeed: 60,            // so viele Tipper ergeben Qualität 100 %
   qualityCap: 2,
   qualityBase: 0.4,
-  // Video: Upload
+  // ---------- Video: Upload ----------
   uploadMB: 100,
   baseMBs: 2.5,           // schlechtes WLAN: 100 MB / 2,5 MB/s = 40 s
   minUploadSeconds: 1,
-  // Wirtschaft
+
+  // ---------- Wirtschaft ----------
   audienceLog: 0.5,       // Reichweite = 1 + log10(1 + Abos) × audienceLog
-  moneyPerView: 3,
+  moneyPerView: 0.035,    // abgestimmt mit tools/balance-welt.js (Map 1 in ~4 h, 1 Bio. ~4 h danach)
   subsPerView: 1.1,       // neue Abos = subsPerView × Aufrufe ^ subsExp
   subsExp: 0.45,
-  passiveViewsPerSub: 0.3, // alte Videos: Aufrufe pro Abo und Sekunde (nur Geld)
+  passiveViewsPerSub: 0.1, // alte Videos: Aufrufe pro Abo und Sekunde (nur Geld)
   buttonBonus: 0.25,      // Aufrufe-Bonus pro Play-Button
+  houseMult: 2.5,         // jedes Haus (globale Reihenfolge über alle Maps): Aufrufe × houseMult
   offlineRate: 0.5,
   offlineMaxSeconds: 8 * 3600,
-  // Portal und Boss
+  // Ungefährer Wert eines normalen Videos (für die Kiste): so viele Treffer mit dieser mittleren Serie
+  typicalHits: 18,
+  typicalCombo: 1.5,
+  chestMinMoney: 20000,   // Mindestgeld aus der Kiste: hilft am Anfang, später zählt der Videowert
+
+  // ---------- Maps und Häuser ----------
+  mapUnlock: { bucht: 0, lagune: 1e12, frost: 1e16 },
+  housePrices: {
+    bucht: [0, 5e4, 5e5, 5e6, 5e7],
+    lagune: [2e12, 2e13, 2e14, 2e15, 2e16, 2e17, 2e18],
+  },
+
+  // ---------- Shop: PC-Teile ----------
+  // Preis = base × growth ^ Stufe. quality: Video × (1 + quality) pro Stufe (multiplikativ), cut = Schnitt-Tempo,
+  // speed = Upload × speed ^ Stufe. Achtung: Bringt eine Runde aller Teile mehr als ihre Preise steigen, läuft
+  // die Wirtschaft davon (Produkt der (1 + quality) muss deutlich unter growth bleiben).
+  parts: {
+    cpu:      { base: 900,  growth: 1.55, quality: 0.076 },
+    gpu:      { base: 1500, growth: 1.6,  quality: 0.105 },
+    maus:     { base: 250,  growth: 1.5,  quality: 0.03, cut: 0.15 },
+    tastatur: { base: 350,  growth: 1.5,  quality: 0.03, cut: 0.15 },
+    monitor:  { base: 1100, growth: 1.55, quality: 0.059 },
+    router:   { base: 600,  growth: 1.6,  quality: 0,    speed: 1.35 },
+  },
+
+  // ---------- Spiele (Themen für Videos) ----------
+  games: {
+    kugel:   { points: 1,   pace: 1,    money: 1,   subs: 1,   minSubs: 0 },
+    moos:    { points: 1.3, pace: 0.95, money: 1.2, subs: 0.9, minSubs: 200 },
+    toaster: { points: 1.8, pace: 0.9,  money: 0.9, subs: 1.5, minSubs: 3000 },
+    kometen: { points: 3,   pace: 0.82, money: 1.3, subs: 1.2, minSubs: 50000 },
+    eulen:   { points: 5,   pace: 0.75, money: 1.2, subs: 1.5, minSubs: 1e6 },
+    magma:   { points: 9,   pace: 0.68, money: 1.5, subs: 1.4, minSubs: 3e7 },
+    nebel:   { points: 16,  pace: 0.62, money: 1.6, subs: 1.6, minSubs: 1e9 },
+  },
+
+  // ---------- Play-Buttons (Abo-Meilensteine) ----------
+  buttonSubs: [1e5, 1e6, 1e7, 1e8, 5e8, 1e9, 5e10, 5e11, 1e12],
+
+  // ---------- Boss-Kiste ----------
+  // odds = Wahrscheinlichkeit (Summe 1), videos = Geld im Wert so vieler normaler Videos,
+  // subs = Anteil der eigenen Abos dazu, charm = Chance auf einen Glücksbringer
+  rarities: {
+    gewoehnlich: { odds: 0.72, videos: 2,  subs: 0,    charm: 0 },
+    selten:      { odds: 0.22, videos: 6,  subs: 0.01, charm: 0 },
+    episch:      { odds: 0.05, videos: 20, subs: 0.03, charm: 1 },
+    legendaer:   { odds: 0.01, videos: 80, subs: 0.1,  charm: 1 },
+  },
+  charms: { kleeblatt: 0.1, kristall: 0.1, krone: 0.5 }, // Aufrufe-Bonus pro Stück
+
+  // ---------- Portal und Boss ----------
   portalEvery: 300,       // alle 5 Minuten …
   portalOpen: 60,         // … für 60 Sekunden offen
   bossHp: 150,
@@ -37,5 +92,6 @@ export const W = {
   attackRadius: 3.2,
   attackDamage: 34,       // drei Treffer und man verliert
   arenaRadius: 17,
-  maxValue: 1e300,
+
+  maxValue: 1e300,        // Obergrenze, damit nie "Infinity" im Spielstand landet
 };

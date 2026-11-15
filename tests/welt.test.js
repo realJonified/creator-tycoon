@@ -16,13 +16,14 @@ import { mulberry32 } from '../tools/balance.js';
 const near = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) <= eps * Math.max(1, Math.abs(b)), `${a} ≈ ${b}`);
 const mem = (init = {}) => { const m = new Map(Object.entries(init)); return { getItem: k => m.get(k) ?? null, setItem: (k, v) => m.set(k, String(v)), data: m }; };
 
-test('Häuser: Wohnung 50 m² gratis, dann 50.000, 500.000 und immer × 10', () => {
+test('Häuser auf Map 1: Wohnung 50 m² gratis, dann 50.000, 500.000 und immer × 10', () => {
   assert.equal(HOUSES[0].price, 0);
   assert.equal(HOUSES[0].size, 50);
   assert.equal(HOUSES[1].price, 5e4);
   assert.equal(HOUSES[2].price, 5e5);
-  for (let i = 2; i < HOUSES.length; i++) near(HOUSES[i].price / HOUSES[i - 1].price, 10);
-  for (let i = 1; i < HOUSES.length; i++) assert.ok(HOUSES[i].size > HOUSES[i - 1].size, 'mehr Platz');
+  const M1 = HOUSES.filter(h => h.map === 'bucht');
+  for (let i = 2; i < M1.length; i++) near(M1[i].price / M1[i - 1].price, 10);
+  for (let i = 1; i < HOUSES.length; i++) assert.ok(HOUSES[i].size > HOUSES[i - 1].size, 'mehr Platz, auch über Maps hinweg');
 });
 
 test('PC-Teile werden mit jedem Kauf teurer und machen das Video besser', () => {
@@ -62,7 +63,7 @@ test('Häuser der Reihe nach kaufen', () => {
   assert.equal(S.home, HOUSES[1].id);
   near(houseMult(S), 2.5);
   assert.equal(S.money, 1e7 - 5e4);
-  S.houses = HOUSES.map(h => h.id);
+  S.houses = { bucht: HOUSES.filter(h => h.map === 'bucht').map(h => h.id) };
   assert.equal(nextHouse(S), null);
 });
 
@@ -179,7 +180,8 @@ test('Migration: Geld und Abos aus dem alten Spielstand (creatorTycoonSave_v1)',
   assert.equal(r.state.money, v1.money);
   assert.equal(r.state.subs, v1.subs);
   assert.equal(r.state.videos, 987);
-  assert.deepEqual(r.state.houses, ['wohnung']);
+  assert.deepEqual(r.state.houses, { bucht: ['wohnung'] });
+  assert.deepEqual(r.state.maps, ['bucht']);
   // Neuere 2D-Stände haben Vorrang
   const st = mem({ creatorTycoonSave_v1: JSON.stringify(v1), vlogvillaSave_v3: JSON.stringify({ v: 3, money: 5, subs: 7 }) });
   assert.equal(loadWorld(st, 1).source, 'vlogvillaSave_v3');
@@ -192,8 +194,8 @@ test('Migration: Geld und Abos aus dem alten Spielstand (creatorTycoonSave_v1)',
 
 test('Speichern und Laden ergibt denselben Zustand, auch bei Billionen', () => {
   const S = newState(5);
-  Object.assign(S, { money: 4.2e22, subs: 1.3e12, views: 9e18, videos: 777, home: 'krone', tutorialDone: true, lastGame: 'nebel' });
-  S.houses = HOUSES.map(h => h.id);
+  Object.assign(S, { money: 4.2e22, subs: 1.3e12, views: 9e18, videos: 777, home: 'strand4', tutorialDone: true, lastGame: 'nebel' });
+  S.houses = { bucht: HOUSES.filter(h => h.map === 'bucht').map(h => h.id) };
   S.parts.cpu = 40; S.parts.router = 12;
   S.buttons = BUTTONS.map(b => b.id);
   S.charms = { krone: 2 };
@@ -210,9 +212,11 @@ test('Kaputte oder unsinnige Spielstände werden repariert oder abgelehnt', () =
   const st = mem({ [SAVE_KEY]: '{kaputt' });
   assert.equal(loadWorld(st, 1).source, 'new');
   assert.equal(st.data.get(SAVE_KEY + '_defekt'), '{kaputt');
-  const S = sanitize({ money: -1, subs: NaN, houses: ['erfunden', 'strand1'], home: 'erfunden', parts: { cpu: 2.7, x: 5 }, buttons: ['gold', 'gold', 'nix'], settings: { graphics: 'ultra' } }, 9);
+  const S = sanitize({ money: -1, subs: NaN, houses: { bucht: ['erfunden', 'strand1'], mond: ['x'] }, maps: ['bucht', 'mond'], map: 'mond', home: 'erfunden', v: 2, parts: { cpu: 2.7, x: 5 }, buttons: ['gold', 'gold', 'nix'], settings: { graphics: 'ultra' } }, 9);
   assert.equal(S.money, 0);
-  assert.deepEqual(S.houses, ['wohnung', 'strand1']);
+  assert.deepEqual(S.houses, { bucht: ['wohnung', 'strand1'] });
+  assert.deepEqual(S.maps, ['bucht']);
+  assert.equal(S.map, 'bucht');
   assert.equal(S.home, 'strand1');
   assert.equal(S.parts.cpu, 2);
   assert.deepEqual(S.buttons, ['gold']);

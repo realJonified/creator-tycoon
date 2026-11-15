@@ -2,15 +2,19 @@
 // Reine Funktionen ohne three.js und ohne DOM, damit sie in Node getestet werden können.
 import { W } from '../data/balance.js';
 import { PARTS, HOUSES, BUTTONS, GAMES, CHARMS } from '../data/content.js';
+import { MAPS, findMap } from '../data/maps.js';
+import { canAfford, spend, addClamped } from './num.js';
+export { findMap };
 
-export const VERSION = 1;
+export const VERSION = 2; // 2 = Update 2 (Maps)
 
 export function newState(now = Date.now()) {
   return {
     v: VERSION,
     money: 0, subs: 0, views: 0, videos: 0,
     parts: Object.fromEntries(PARTS.map(p => [p.id, 0])),
-    houses: ['wohnung'], home: 'wohnung',
+    maps: ['bucht'], map: 'bucht',
+    houses: { bucht: ['wohnung'] }, home: 'wohnung',
     buttons: [], charms: {},
     portal: { in: W.portalEvery, open: 0 },
     lastGame: 'kugel',
@@ -22,12 +26,11 @@ export function newState(now = Date.now()) {
   };
 }
 
-const clamp = x => (x > W.maxValue ? W.maxValue : x > 0 ? x : 0);
 
 export function earn(S, money, subs = 0) {
-  S.money = clamp(S.money + money);
-  S.subs = clamp(S.subs + subs);
-  if (money > 0) S.stats.earned = clamp(S.stats.earned + money);
+  S.money = addClamped(S.money, money);
+  S.subs = addClamped(S.subs, subs);
+  if (money > 0) S.stats.earned = addClamped(S.stats.earned, money);
 }
 
 // ---------- PC-Teile ----------
@@ -39,34 +42,56 @@ export function partPrice(S, id) {
 }
 export function buyPart(S, id) {
   const price = partPrice(S, id);
-  if (!Number.isFinite(price) || S.money < price) return false;
-  S.money -= price;
+  if (!canAfford(S.money, price)) return false;
+  S.money = spend(S.money, price);
   S.parts[id] = partLevel(S, id) + 1;
   return true;
 }
 
-// PC-Qualität: 1 + Summe der Stufen × Qualitäts-Plus. Wirkt auf jedes Video.
-export const pcQuality = S => 1 + PARTS.reduce((s, p) => s + partLevel(S, p.id) * (p.quality || 0), 0);
+// PC-Qualität: jede Stufe multipliziert mit (1 + quality). Wirkt auf jedes Video.
+// Multiplikativ, damit Teile auch nach Map 1 noch spürbar wirken (Preise steigen ja auch multiplikativ).
+export const pcQuality = S => PARTS.reduce((m, p) => m * Math.pow(1 + (p.quality || 0), partLevel(S, p.id)), 1);
 // Maus und Tastatur machen jeden Tipper im Schnitt wertvoller.
 export const cutPower = S => 1 + PARTS.reduce((s, p) => s + partLevel(S, p.id) * (p.cut || 0), 0);
 export const uploadSpeed = S => W.baseMBs * PARTS.reduce((m, p) => m * Math.pow(p.speed || 1, partLevel(S, p.id)), 1);
 export const uploadSeconds = S => Math.max(W.minUploadSeconds, W.uploadMB / uploadSpeed(S));
 
+// ---------- Maps ----------
+// S.maps = freigeschaltete Maps, S.map = aktuelle Map, S.houses = { mapId: [Haus-ids] }
+export const mapUnlocked = (S, id) => S.maps.includes(id);
+// Die nächste Map, die man freischalten kann (Maps werden der Reihe nach freigeschaltet).
+export const nextLockedMap = S => MAPS.find(m => !S.maps.includes(m.id)) || null;
+export function canUnlockMap(S, id) {
+  const m = findMap(id), next = nextLockedMap(S);
+  return !!(m && next && next.id === id && m.ready && canAfford(S.money, m.unlock));
+}
+export function unlockMap(S, id) {
+  if (!canUnlockMap(S, id)) return false;
+  const m = findMap(id);
+  S.money = spend(S.money, m.unlock);
+  S.maps.push(id);
+  if (!S.houses[id]) S.houses[id] = [];
+  return true;
+}
+
 // ---------- Häuser ----------
 export const findHouse = id => HOUSES.find(h => h.id === id) || null;
 export const houseIndex = id => HOUSES.findIndex(h => h.id === id);
-export const ownsHouse = (S, id) => S.houses.includes(id);
-// Das nächste kaufbare Haus (man kauft der Reihe nach).
-export const nextHouse = S => HOUSES.find(h => !S.houses.includes(h.id)) || null;
-export const bestHouseIndex = S => Math.max(0, ...S.houses.map(houseIndex));
-// Jedes Haus über der Wohnung: Aufrufe × 2,5 (mehr Platz, bessere Einrichtung).
-export const houseMult = S => Math.pow(2.5, bestHouseIndex(S));
+export const ownedHouses = S => Object.values(S.houses).flat();
+export const ownsHouse = (S, id) => { const h = findHouse(id); return !!h && (S.houses[h.map] || []).includes(id); };
+// Das nächste kaufbare Haus auf einer Map (man kauft pro Map der Reihe nach).
+export const nextHouse = (S, mapId = S.map) => (findMap(mapId)?.houses || []).find(h => !ownsHouse(S, h.id)) || null;
+export const bestHouseIndex = S => Math.max(0, ...ownedHouses(S).map(houseIndex));
+// Jedes Haus über der Wohnung: Aufrufe × 2,5 (mehr Platz, bessere Einrichtung). Gilt über alle Maps.
+export const houseMult = S => Math.pow(W.houseMult, bestHouseIndex(S));
 
 export function buyHouse(S, id) {
-  const h = findHouse(id), next = nextHouse(S);
-  if (!h || !next || next.id !== id || S.money < h.price) return false;
-  S.money -= h.price;
-  S.houses.push(id);
+  const h = findHouse(id);
+  if (!h || !mapUnlocked(S, h.map)) return false;
+  const next = nextHouse(S, h.map);
+  if (!next || next.id !== id || !canAfford(S.money, h.price)) return false;
+  S.money = spend(S.money, h.price);
+  (S.houses[h.map] ||= []).push(id);
   S.home = id;
   return true;
 }
@@ -98,14 +123,14 @@ export function videoOutcome(S, { points, quality, game }) {
 // Ungefährer Wert eines normalen Videos (für Belohnungen aus der Boss-Kiste).
 export function typicalVideo(S) {
   const game = [...GAMES].reverse().find(g => gameUnlocked(S, g)) || GAMES[0];
-  const points = 18 * W.letterPoints * game.points * 1.5; // ~18 Treffer mit Serie
+  const points = W.typicalHits * W.letterPoints * game.points * W.typicalCombo;
   return videoOutcome(S, { points, quality: 1, game });
 }
 
 export function finishVideo(S, { points, quality, game }) {
   const out = videoOutcome(S, { points, quality, game });
   earn(S, out.money, out.subs);
-  S.views = clamp(S.views + out.views);
+  S.views = addClamped(S.views, out.views);
   S.videos++;
   S.stats.videos++;
   S.stats.bestVideo = Math.max(S.stats.bestVideo, out.views);

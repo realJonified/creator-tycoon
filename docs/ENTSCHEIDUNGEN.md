@@ -2,6 +2,89 @@
 
 Eine Zeile pro Annahme, die ich ohne Rückfrage getroffen habe.
 
+## Update 2 (Branch welt-v2)
+
+### Etappe 1: Map-System
+- Maps stehen in `js3d/data/maps.js` (nicht in `js/data`, weil alle Daten der 3D-Welt in `js3d/data` liegen). Jede Map nennt eine Bau-Funktion aus `js3d/scene/maps/index.js`. Map 1 ist die bisherige Insel (`buildBucht` in `world.js`), noch nicht fertige Maps nutzen die Baustellen-Karte `baustelle.js`.
+- Map 1 hat laut Vorgabe nur noch die ersten 5 Häuser (bis Leuchtturmhaus, 50 Mio. €). Die Häuser 6–12 aus Version 1 (Waldhaus bis Kronenschloss) gibt es dort nicht mehr. Wer sie besass, bekommt bei der Migration den vollen Kaufpreis als Geld zurück und sieht beim Start einen Hinweis. Annahme: lieber Geld zurück als eine Map 1, die für alte Spieler anders aussieht.
+- Häuser-ids sind über alle Maps eindeutig. Der Hausbonus (× 2,5 pro Stufe) richtet sich nach dem besten gekauften Haus in der globalen Reihenfolge aller Maps.
+- Maps werden der Reihe nach freigeschaltet: Map 2 für 1 Billion €, Map 3 ist ein Gerüst (`ready: false`, Platzhalterpreis 10 Brd. €, wird im Balancing festgelegt).
+- Das Portal öffnet jetzt die Weltkarte. Damit der Bosskampf aus Version 1 bleibt, steht oben ein „Boss-Portal betreten“-Knopf, solange das Boss-Portal offen ist (alle 5 Minuten für 60 s, wie bisher). Das geht von jeder Map aus, denn jede Map hat ein Portal.
+- Spielstand: gleicher Schlüssel `kanalbuchtSave_v1`, aber Version 2 im Feld `v`. Neue Felder: `maps` (freigeschaltet), `map` (aktuell) und `houses` als `{ mapId: [ids] }`. Ein Spielstand ohne Versionsfeld gilt als Version 1.
+- Karten-Verwalter (`js3d/core/maps.js`): immer genau eine Map, Wechsel in einer Warteschlange (der Test hat gezeigt, dass gleichzeitige Wechsel sonst zwei Maps hinterlassen). Entsorgen über `disposeObject` (Geometrien, Materialien, Texturen, auch Shader-Uniform-Texturen). Geteilte Materialien sind mit `userData.shared` markiert und bleiben bestehen.
+- Der Ladebildschirm wartet auf höchstens zwei Bild-Takte zu je 60 ms. Ohne diese Grenze blieb er in einem Hintergrund-Tab hängen.
+- Speichertest (10 Wechsel Kanalbucht ↔ Baustelle im Browser): Die GPU-Ressourcen bleiben exakt gleich, Kanalbucht immer 38 Geometrien, 3 Texturen, 16 Shader-Programme, Baustelle 23/2/12. Der JS-Heap stieg von 12 auf etwa 30 MB und blieb in den letzten vier Wechseln flach (28/31/31/30 MB). Wann der Browser aufräumt, lässt sich von der Seite aus nicht erzwingen.
+
+### Etappe 2: Map 2 „Wolkenlagune“ und Gerüst für Map 3
+- Map 2 ist eine Ringinsel um eine Lagune. Freischalten kostet 1 Billion €. Sie hat 7 Häuser (Map 1: 5), Preise vorläufig 2 Bio. € bis 2 Trill. € (× 10 pro Haus, liegen über dem Freischaltpreis). Die Feinabstimmung folgt in Etappe 5.
+- Ebenen („Zonen“) pro Map: Boden, Wolkeninsel (16 m hoch) und Lagunengrund (7 m tief). Jede Ebene hat eigene Grenzen und Hindernisse, Auslöser und Häuser gehören zu einer Ebene. Die aktuelle Ebene wird mit der Position gespeichert.
+- Zugang zur Wolkeninsel per Sprungpad (Bogenflug 1,3 s), zurück per Sprungpad auf der Insel. Zugang zum Lagunengrund per Tauchsteg (Absinken 1,6 s), zurück über den Auftauch-Ring. Benutzt wird beides mit E bzw. dem Knopf, damit man nicht aus Versehen springt.
+- Unterwasser-Effekt: blauer, dichter Nebel (1–32 m), kein Himmel, 140 aufsteigende Blasen als Partikel mit per Code erzeugter runder Textur (16 × 16 Pixel), durchsichtige Wasseroberfläche (von oben sieht man die Kuppel). Im Haus und in der Arena wird der Nebel zurückgesetzt.
+- Das Wolkenhaus nutzt ein kleineres Hausmodell, weil es auf der schwebenden Insel sonst keinen Platz hätte. Die Tiefseekuppel ist ein eigenes Modell (Glaskuppel mit Schleuse).
+- Map 3 „Frostgipfel“ ist als Gerüst angelegt: Datensatz mit Farben und Preis (`ready: false`) und Bau-Funktion `frost.js`, die bis zum Ausbau die Baustelle in Frost-Farben zeigt.
+- Die Kamera-Kollision gilt jetzt auf jeder Ebene (vorher nur am Boden).
+- Speichertest mit echter Map 2 (10 Wechsel Kanalbucht ↔ Wolkenlagune): Geometrien bleiben bei 38/35, Texturen bei 3/9, Shader-Programme bei 15, Objekte in der Szene bei 8. Der JS-Heap pendelte zwischen 11 und 28 MB und lag am Ende bei 16 MB.
+- Für die Unit-Tests gibt es eine kleine Canvas-Attrappe. So laufen die echten Bau-Funktionen aller Maps in Node und lassen sich auf vollständiges Entsorgen prüfen.
+
+### Etappe 3: NPC-YouTuber
+- Pro fertiger Map gibt es 7 (Map 1) bzw. 8 (Map 2) NPCs, definiert in `maps.js` unter `npcPaths`: Name, Farben, Abos am Anfang, Wachstum pro Spielstunde, Tempo und Weg. Alle Namen sind erfunden (Muschelmia, Brezel-Bruno, Wellenwanda, Kapitän Klick …).
+- Abozahlen: Map 1 von 830 bis 210.000, Map 2 von 4,2 Mio. bis 870 Mio. Sie wachsen um 0,5–5 % pro Spielstunde und werden aus der gespeicherten Spielzeit berechnet. Es braucht also kein neues Feld im Spielstand, und die Zahl springt nach dem Neuladen nicht zurück.
+- Wege: Wegpunkte als Schleife (Rundwege per Kreis-Hilfsfunktion), gerade Strecken, 1,2 s Pause an jedem Wegpunkt, kein Pathfinding. NPCs gehen durch Hindernisse hindurch und blockieren den Spieler nicht.
+- Grafik: Alle NPCs einer Map teilen sich 8 InstancedMeshes (Beine, Körper, Arme, Kopf, Haare, Augen), also 8 Draw-Calls unabhängig von der Anzahl. Animation nur durch Bein- und Armschwung, beim Reden winkt der rechte Arm.
+- Namensschilder: ein gemeinsamer Canvas-Atlas (eine Zeile pro NPC). Jedes Schild ist ein Ausschnitt mit derselben Bildquelle (eine GPU-Textur). Der Atlas wird alle 10 s Spielzeit neu gezeichnet. Schilder sind nur bis 32 m sichtbar.
+- NPCs ausserhalb der Sichtweite (höchstens 70 m bzw. 45 % der Kamera-Sichtweite) werden ausgeblendet und bewegen sich nicht. Im Haus und in der Arena ist die ganze Map samt NPCs unsichtbar und pausiert.
+- Reden: In der Nähe (unter 3,2 m) erscheint „Mit … reden“ (E oder Knopf). Der NPC bleibt 3,5 s stehen, dreht sich zum Spieler, winkt und sagt einen von 10 Sätzen in einer Sprechblase. Es gibt nur eine Sprechblase pro Map.
+- Draw-Calls mit NPCs: Map 1 etwa 52, Map 2 etwa 53 (vorher 39 bzw. 44).
+
+### Etappe 4: Grafikstufe „Hoch“
+- Niedrig und Mittel sind unverändert wie in Version 1 (Lambert-Materialien, kein Tonemapping, keine Nachbearbeitung). „Hoch“ schaltet zur Laufzeit um, ohne die Map neu zu laden:
+  - Materialien: Lambert wird zu MeshStandard (Rauigkeit 0,86, Wasser 0,08). Beim Zurückschalten kommen die Originale wieder (`userData.lowMat`). Geteilte Materialien bleiben geteilt (Cache).
+  - Per Code erzeugte Oberflächen: eine 128 × 128-Rauschtextur, aufgetragen über die Weltposition (die zusammengefügten Meshes haben keine Texturkoordinaten). Böden werden fleckig (Gras, Sand), Wände bekommen Putzkorn, braune Flächen Holzmaserung. Figuren (Spieler, NPCs) bleiben glatt, sonst bekam die Haut Maserung.
+  - Licht: Umgebungslicht aus einer per PMREM gerenderten Himmelskugel. Es wird nur neu berechnet, wenn sich die Himmelsfarben ändern (nicht jedes Bild beim Tauchen). Sonne 3,4, Himmelslicht 0,9.
+  - Weiche Schatten per VSM (Radius 6, 2048 px). Niedrig/Mittel bleiben bei PCF.
+  - Wasser: glatt und spiegelnd, mit wandernden Wellen in der Normalen.
+  - Nachbearbeitung (eigene kleine Pipeline, ohne three.js-Zusatzmodule): HDR-Bild mit 4× MSAA, Umgebungsverdeckung aus der Tiefe (10 Proben, halbe Auflösung, weichgezeichnet), leichtes Bloom (halbe Auflösung), Neutral-Tonemapping. ACES wirkte zu blass, Neutral hält die Farben kräftig.
+  - Mehr Details, nur in Hoch sichtbar: Fensterbänke mit Blumenkästen, Fensterläden, Eckleisten, Vordach mit Lampe, Dachrinne und rund 2.000 Grasbüschel pro Map (je ein Mesh). Sie werden immer mitgebaut, kosten in Niedrig/Mittel aber keinen Draw-Call.
+- Vorschlag beim ersten Start („Automatisch“): Handy Niedrig, PC mit mindestens 4 Kernen und MSAA-fähiger Grafik Hoch, sonst Mittel. Beim ersten Spielen erscheint ein Hinweis, auf welche Stufe gestellt wurde.
+- Automatische Herabstufung (`js3d/core/quality.js`): Hoch → Mittel unter 50 FPS, Mittel → Niedrig unter 45 FPS (PC) bzw. 28 FPS (Handy), jeweils gemittelt über 3 Sekunden. Hochgeschaltet wird nie automatisch. Im Spiel geprüft: Bei vorgespielten 20 FPS ging es nach 5,6 s auf Mittel und nach 10,6 s auf Niedrig.
+- Die Debug-Anzeige zählt Draw-Calls und Dreiecke jetzt über alle Durchgänge eines Bildes (Schatten, Szene, Nachbearbeitung).
+- **Messung** (Renderzeit pro Bild mit Warten auf die GPU, `kanalbucht.engine.benchmark()`, 1280 × 800, Pixel-Ratio 1, NVIDIA RTX 5080):
+
+  | Map | Stufe | ms/Bild | mögliche FPS | Draw-Calls | Dreiecke |
+  |---|---|---|---|---|---|
+  | Kanalbucht | Niedrig | 0,98 | ~1.020 | 48 | 15.800 |
+  | Kanalbucht | Mittel | 1,36 | ~730 | 86 | 38.900 |
+  | Kanalbucht | Hoch | 3,39 | ~300 | 100 | 127.500 |
+  | Wolkenlagune | Niedrig | 0,58 | ~1.730 | 43 | 13.400 |
+  | Wolkenlagune | Mittel | 0,77 | ~1.300 | 76 | 28.200 |
+  | Wolkenlagune | Hoch | 1,34 | ~740 | 90 | 107.800 |
+
+  Die Grafikkarte ist sehr stark, die absoluten Zahlen sagen über normale PCs und Handys wenig. Aussagekräftig ist das Verhältnis: Hoch kostet auf Map 1 etwa 2,5-mal so viel wie Mittel und 3,5-mal so viel wie Niedrig. Die im Test-Browser angezeigten FPS (10–50) kommen vom Hintergrundfenster und sind nicht verwertbar. Auf einem echten Handy und einem normalen PC habe ich nicht gemessen.
+
+### Etappe 5: Balancing
+- **Eine Zahlen-Datei:** Alle Zahlen der 3D-Welt stehen jetzt in `js3d/data/balance.js` (Wirtschaft, Map-Freischaltung, Hauspreise, PC-Teile, Spiele, Play-Buttons, Kiste, Glücksbringer, Boss, Video). `content.js` und `maps.js` enthalten nur noch Namen, Symbole und Orte und holen die Zahlen von dort.
+- Das Skript heisst `tools/balance-welt.js`, weil `tools/balance.js` schon die Simulation des 2D-Spiels (Klassik) ist. Es benutzt dieselbe Spiellogik wie das Spiel (`js3d/core/*`), nicht eine Nachbildung. Die Ziele stehen oben im Skript (`TARGETS`), das Spielermodell darunter (`PLAYER`).
+- **Erste Messung** mit den Zahlen aus Version 1: Map 1 nach 56 Minuten, die 1 Billion erst 37 Stunden danach. Beides lag ausserhalb der Ziele.
+- **PC-Teile wirken jetzt multiplikativ** (Video × (1 + Qualität) pro Stufe). Vorher wurden die Boni addiert, deshalb waren Teile spät fast wertlos und die Lücke bis zur Billion riesig. Die multiplikative Fassung kann davonlaufen: Bringt eine Kaufrunde aller sechs Teile mehr, als ihre Preise steigen, finanziert sich jede Runde selbst (beim ersten Versuch war alles in 10 Minuten gekauft). Darum sind die Qualitätswerte klein (zusammen etwa × 1,42 pro Runde bei Preisen × 1,5 bis × 1,6). In der Datei steht dazu eine Warnung.
+- Weitere angepasste Zahlen: Geld pro Aufruf 0,035 (Map 1 sonst zu schnell), passive Aufrufe 0,1 pro Abo und Sekunde (sonst trägt das passive Geld allein bis zur Billion), Mindestgeld aus der Kiste 20.000 € (hilft am Anfang, später zählt der Videowert).
+- Annahmen im Spielermodell: 85 % getroffene Buchstaben, 6 Tipper/s, 8 s Wege und Auswahl pro Video, 85 % gewonnene Bosskämpfe mit je 45 s. Gekauft wird zuerst das nächste Haus, dann die nächste Map, PC-Teile nur, wenn das günstigste unter 4 % des nächsten Ziels kostet.
+- **Ergebnis** (Seed 1):
+
+  | Meilenstein | aktiver Spieler | oft offline: aktiv | oft offline: echte Zeit |
+  |---|---|---|---|
+  | Erstes Haus (50.000 €) | 24 min | – | – |
+  | Map 1 komplett | 3 h 48 min | 3 h | 24 h |
+  | Map 2 freigeschaltet (1 Bio. €) | 7 h 41 min | 6 h 15 min | 54 h 15 min |
+  | Abstand Map 1 → Map 2 | 3 h 53 min | 3 h 15 min | – |
+
+  Der Gelegenheitsspieler spielt 20 Minuten und ist dann 3 Stunden weg (Offline-Einnahmen 50 %, höchstens 8 h). Er braucht weniger aktive Zeit, aber über zwei Tage echte Zeit. Mit den Startwerten 1 bis 5 lag Map 1 zwischen 3 h 42 min und 4 h 15 min, der Abstand zur Billion zwischen 3 h 24 min und 4 h 8 min. Der Test `tests/balance-welt.test.js` prüft die Ziele mit drei Startwerten.
+- Auf Map 2 wird es am Ende schnell: Alle 7 Häuser sind etwa 4 Stunden nach dem Freischalten gekauft, weil jedes Haus × 2,5 Aufrufe bringt. Für Map 3 (Frostgipfel, 10 Billiarden) braucht es eigene Zahlen, wenn sie gebaut wird. Das Skript zeigt das dann sofort.
+- **Grosse Zahlen:** Geld und Abos bleiben normale JavaScript-Zahlen (double, bis etwa 1e308, Obergrenze 1e300). BigInt wäre exakt, passt aber nicht zu Multiplikatoren mit Kommazahlen und hätte einen Umbau des ganzen Spiels bedeutet. Ab 2^53 (etwa 9 Billiarden) sind Doubles nicht mehr auf den Euro genau. Damit dabei nichts schiefgeht, gibt es `js3d/core/num.js`:
+  - `canAfford` erlaubt eine relative Abweichung von 1e-14 (bei 1 Billion sind das 0,01 €), damit 999.999.999.999,9999 € für einen Preis von 1 Billion reichen. 1e-12 war zu grosszügig (1 € bei 1 Billion).
+  - `spend` setzt einen winzigen Rest auf 0 und wird nie negativ. `addClamped` hält Werte unter der Obergrenze.
+  - Die Anzeige rundet auf Tsd., Mio., Mrd. und Bio. Alles ist in `tests/num.test.js` getestet.
+- **Abschluss-Check** (Grafik Hoch, nach 10, 20 und 30 Map-Wechseln): Geometrien 41, Texturen 18, Shader-Programme 28, Szenen-Objekte 8, alles gleichbleibend. Der JS-Speicher pendelt zwischen 21 und 42 MB und fällt nach der Speicherbereinigung wieder auf 21 MB. Die Konsole blieb ohne Fehler. Klassik ist über das Startmenü erreichbar, und von dort führt ein Knopf zurück in die 3D-Welt.
+
 ## 3D-Welt „Kanalbucht“ (Branch welt-v1)
 - Der Branch `welt-v1` baut auf `ausbau` (Vlogvilla) auf, weil das der neueste Stand war. „Klassik“ ist deshalb Vlogvilla, nicht die allererste Version.
 - Die 3D-Welt liegt auf `index.html`, das 2D-Spiel auf `klassik.html`. Beide verlinken sich gegenseitig (Startbild und Menü).

@@ -1,12 +1,15 @@
 // Renderer, Licht, Himmel, Nebel und Grafikstufen. Misst die FPS und schaltet bei "Automatisch" herunter.
 import * as THREE from '../../vendor/three.module.min.js';
+import { applyHigh, tickHigh, makeEnvironment, createPost } from './hiquality.js';
+import { suggestLevel, autoLevel, AUTO_LIMIT } from '../core/quality.js';
+export { AUTO_LIMIT };
 
 export const QUALITY = {
   niedrig: { ratio: 1,    shadows: 0,    far: 120, fogNear: 45, fogFar: 115, details: false },
   mittel:  { ratio: 1.25, shadows: 1024, far: 180, fogNear: 70, fogFar: 170, details: true },
-  hoch:    { ratio: 1.5,  shadows: 2048, far: 260, fogNear: 95, fogFar: 240, details: true },
+  // Hoch: realistischer Look (Standard-Materialien, Umgebungslicht, Tonemapping, Bloom, AO, weiche Schatten)
+  hoch:    { ratio: 1.5,  shadows: 2048, far: 260, fogNear: 95, fogFar: 240, details: true, high: true },
 };
-const ORDER = ['niedrig', 'mittel', 'hoch'];
 export const isTouch = () => matchMedia('(pointer: coarse)').matches;
 
 const SKY_TOP = new THREE.Color('#5fa8ff'), HORIZON = new THREE.Color('#ffd9b0'); // werden per setSky umgefärbt
@@ -16,6 +19,7 @@ export function createEngine(canvas) {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.setClearColor(HORIZON);
+  renderer.info.autoReset = false; // Draw-Calls über alle Durchgänge eines Bildes zählen (Debug-Anzeige)
 
   const scene = new THREE.Scene();
   scene.fog = new THREE.Fog(HORIZON, 70, 170);
@@ -46,8 +50,37 @@ export function createEngine(canvas) {
   sunDisc.position.copy(sunDir).multiplyScalar(420);
   scene.add(sunDisc);
 
-  const details = [];  // Objekte, die nur ab "mittel" sichtbar sind
+  const details = [];    // Objekte, die nur ab "mittel" sichtbar sind
+  const hiDetails = [];  // Objekte, die nur bei "hoch" sichtbar sind (Grasbüschel, Hausdetails)
   let level = 'mittel', setting = 'auto', onLevel = null;
+  let post = null, env = null, envKey = '', high = false;
+  const LIGHT = { low: { hemi: 1.9, sun: 2.6 }, high: { hemi: 0.9, sun: 3.4 } };
+
+  function setShadowType(type) {
+    if (renderer.shadowMap.type === type) return;
+    renderer.shadowMap.type = type;
+    sun.shadow.map?.dispose(); sun.shadow.map = null;
+    scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { m.needsUpdate = true; }); });
+  }
+  function refreshEnv() {
+    const top = '#' + sky.material.uniforms.top.value.getHexString(), bottom = '#' + sky.material.uniforms.bottom.value.getHexString();
+    if (!high || envKey === top + bottom) return;
+    env?.dispose(); env = makeEnvironment(renderer, top, bottom); envKey = top + bottom;
+    scene.environment = env.texture;
+  }
+  function setHigh(on) {
+    high = on;
+    applyHigh(scene, on);
+    // Neutral-Tonemapping (Khronos PBR Neutral): weiche Lichter wie ACES, aber die Farben bleiben kräftig
+    renderer.toneMapping = on ? THREE.NeutralToneMapping : THREE.NoToneMapping;
+    renderer.toneMappingExposure = 0.95;
+    hemi.intensity = on ? LIGHT.high.hemi : LIGHT.low.hemi; sun.intensity = on ? LIGHT.high.sun : LIGHT.low.sun;
+    scene.environmentIntensity = 0.55;
+    setShadowType(on ? THREE.VSMShadowMap : THREE.PCFSoftShadowMap);
+    sun.shadow.radius = on ? 6 : 1; sun.shadow.blurSamples = 12;
+    if (on) { post ??= createPost(renderer); post.setSize(); envKey = ''; refreshEnv(); }
+    else { scene.environment = null; env?.dispose(); env = null; envKey = ''; post?.dispose(); post = null; }
+  }
 
   function apply(name) {
     level = name;
@@ -61,14 +94,21 @@ export function createEngine(canvas) {
     camera.far = q.far; camera.updateProjectionMatrix();
     scene.fog.near = q.fogNear; scene.fog.far = q.fogFar;
     for (const d of details) d.visible = q.details;
+    for (const d of hiDetails) d.visible = !!q.high;
+    if (!!q.high !== high) setHigh(!!q.high);
     resize();
     onLevel?.(name);
   }
 
   function setSetting(s) {
     setting = s;
-    apply(s === 'auto' ? (isTouch() ? 'niedrig' : 'mittel') : s);
+    apply(s === 'auto' ? suggested() : s);
     samples.length = 0; warmup = 3;
+  }
+
+  // Vorschlag beim ersten Start: Handy "Niedrig", PC mit guter Leistung "Hoch", sonst "Mittel".
+  function suggested() {
+    return suggestLevel({ touch: isTouch(), cores: navigator.hardwareConcurrency || 4, maxSamples: renderer.capabilities.maxSamples });
   }
 
   function resize() {
@@ -77,6 +117,7 @@ export function createEngine(canvas) {
     camera.aspect = w / h;
     camera.fov = w < h ? 70 : 60;
     camera.updateProjectionMatrix();
+    post?.setSize();
   }
   addEventListener('resize', resize);
 
@@ -103,22 +144,55 @@ export function createEngine(canvas) {
     if (samples.length < 3) return;
     const avg = samples.reduce((a, b) => a + b, 0) / samples.length;
     samples.length = 0;
-    const limit = isTouch() ? 28 : 45;
-    const i = ORDER.indexOf(level);
-    if (avg < limit && i > 0) { apply(ORDER[i - 1]); warmup = 2; }
+    const next = autoLevel(level, avg, isTouch());
+    if (next !== level) { apply(next); warmup = 2; }
   }
 
   return {
-    THREE, renderer, scene, camera, sun, details,
+    THREE, renderer, scene, camera, sun, details, hiDetails, suggested,
     get level() { return level; }, get setting() { return setting; }, get fps() { return fps; },
     set onLevel(fn) { onLevel = fn; },
     setSetting, resize, followShadow, measure,
     // Himmel und Nebel umfärben (Insel: Nachmittag, Arena: violette Dämmerung)
-    setSky(top, bottom) {
+    // sky = { top, bottom, hemiSky?, hemiGround?, sun? } aus js3d/data/maps.js; showSun = Sonnenscheibe zeigen
+    setSky(top, bottom, { hemiSky = '#cfe6ff', hemiGround = '#6f8f4a', sun: sunColor = '#ffe0b5', showSun = true } = {}) {
       sky.material.uniforms.top.value.set(top); sky.material.uniforms.bottom.value.set(bottom);
       scene.fog.color.set(bottom); renderer.setClearColor(bottom);
-      sunDisc.visible = top === '#5fa8ff';
+      hemi.color.set(hemiSky); hemi.groundColor.set(hemiGround); sun.color.set(sunColor);
+      sunDisc.visible = showSun;
+      refreshEnv();
     },
-    render() { renderer.render(scene, camera); },
+    // Unterwasser: blauer, dichter Nebel. Aus: Nebelweite der Grafikstufe zurück.
+    setUnderwater(on) {
+      const q = QUALITY[level];
+      if (on) { scene.fog.color.set('#1c6e96'); scene.fog.near = 1; scene.fog.far = 32; renderer.setClearColor('#1c6e96'); sky.visible = false; sunDisc.visible = false; }
+      else { scene.fog.near = q.fogNear; scene.fog.far = q.fogFar; sky.visible = true; }
+    },
+    // Neue Objekte (Map, Haus) auf die aktuelle Stufe bringen.
+    refreshQuality() {
+      for (const d of details) d.visible = QUALITY[level].details;
+      for (const d of hiDetails) d.visible = high;
+      if (high) applyHigh(scene, true);
+    },
+    // Detail-Listen von einer entsorgten Gruppe befreien.
+    forget(group) {
+      const inside = o => { for (let p = o; p; p = p.parent) if (p === group) return true; return false; };
+      for (const list of [details, hiDetails]) for (let i = list.length - 1; i >= 0; i--) if (inside(list[i])) list.splice(i, 1);
+    },
+    get high() { return high; },
+    get post() { return post; },
+    // Messung: rendert n Bilder und wartet jeweils auf die GPU (1-Pixel-Auslesen). Liefert ms pro Bild.
+    benchmark(n = 60) {
+      const gl = renderer.getContext(), px = new Uint8Array(4);
+      const t0 = performance.now();
+      for (let i = 0; i < n; i++) { this.render(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); }
+      const ms = (performance.now() - t0) / n;
+      return { level, ms: +ms.toFixed(2), fps: Math.round(1000 / ms), calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, size: renderer.getDrawingBufferSize(new THREE.Vector2()).toArray() };
+    },
+    render() {
+      renderer.info.reset();
+      if (high && post) { tickHigh(performance.now() / 1000); post.render(scene, camera); }
+      else renderer.render(scene, camera);
+    },
   };
 }

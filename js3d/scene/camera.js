@@ -19,13 +19,15 @@ export function createCameraRig(camera) {
       actual = allowed < actual ? allowed : actual + (Math.min(dist, allowed) - actual) * Math.min(1, dt * 3);
       const d = actual;
       const tx = target.x + sx * Math.cos(pitch) * d, tz = target.z + sz * Math.cos(pitch) * d;
-      const ty = 1.6 + Math.sin(pitch) * d;
+      const by = target.y || 0;
+      const ty = by + 1.6 + Math.sin(pitch) * d;
       const k = snap ? 1 : Math.min(1, dt * 10);
       cur.x += (tx - cur.x) * k; cur.y += (ty - cur.y) * k; cur.z += (tz - cur.z) * k;
       const kl = snap ? 1 : Math.min(1, dt * 14);
       look.x += (target.x - look.x) * kl; look.z += (target.z - look.z) * kl;
+      look.y += (by + 1.5 - look.y) * kl;
       snap = false;
-      camera.position.set(cur.x, Math.max(0.6, cur.y), cur.z);
+      camera.position.set(cur.x, Math.max(by + 0.6, cur.y), cur.z);
       camera.lookAt(look.x, look.y, look.z);
     },
   };

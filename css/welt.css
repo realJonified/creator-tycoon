@@ -145,3 +145,22 @@ button, select, input { font: inherit; color: inherit; }
 .plaque span { font-size: 2.6rem; color: #fff; text-shadow: 0 2px 4px rgba(0, 0, 0, .4); }
 @keyframes pop { from { transform: scale(.3) rotate(-15deg); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* ---------- Ladebildschirm und Weltkarte (Update 2) ---------- */
+#loading { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: linear-gradient(180deg, #312e81, #0e7490); color: #fff; }
+.load-box { text-align: center; font-size: 1.2rem; font-weight: 700; }
+.load-spin { font-size: 4rem; animation: spin 1.2s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.boss-go { width: 100%; border: none; border-radius: 14px; padding: 12px; margin: 4px 0 10px; cursor: pointer; color: #fff; background: linear-gradient(90deg, #7c3aed, #db2777); display: flex; flex-direction: column; gap: 2px; }
+.boss-go small { opacity: .9; }
+.boss-wait { margin: 4px 0 10px; color: var(--muted); font-weight: 600; }
+.maps { display: grid; gap: 8px; }
+.map-card { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; border: 2px solid var(--line);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--top) 22%, transparent), color-mix(in srgb, var(--bottom) 18%, transparent)); }
+.map-card.here { border-color: #0e7490; }
+.map-card.locked { opacity: .85; }
+.map-icon { font-size: 2.2rem; }
+.map-info { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.map-tag { font-weight: 700; font-size: .85rem; white-space: nowrap; }
+.map-tag.here { color: #0e7490; }
+@media (max-width: 420px) { .map-card { flex-wrap: wrap; } .map-card > :last-child { width: 100%; } }

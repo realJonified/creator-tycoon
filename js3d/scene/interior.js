@@ -3,9 +3,11 @@
 // sieht sie die Rückseite, und die wird nicht gezeichnet. So bleibt der Blick frei.
 import * as THREE from '../../vendor/three.module.min.js';
 import { Builder, matrix, LAMBERT, textSprite } from './build.js';
-import { HOUSES, BUTTONS, PARTS } from '../data/content.js';
+import { disposeObject } from './dispose.js';
+import { HOUSES, BUTTONS, PARTS } from '../data/content.js'; // HOUSES = alle Maps, globaler Index
 
 const WALL_MAT = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.FrontSide });
+WALL_MAT.userData.shared = true;
 
 export function roomSize(houseIdx) {
   return Math.max(7.5, Math.min(28, Math.sqrt(HOUSES[houseIdx].size) * 1.05));
@@ -120,7 +122,7 @@ export function buildInterior(engine, S, houseIdx) {
     spawn: { x: 0, z: half - 1.6, yaw: 0 },
     bounds: { x: 0, z: 0, r: Math.SQRT2 * half - 0.4 },
     clamp(pos) { pos.x = Math.max(-half + 0.45, Math.min(half - 0.45, pos.x)); pos.z = Math.max(-half + 0.45, Math.min(half - 0.45, pos.z)); },
-    dispose() { engine.scene.remove(group); group.traverse(o => { o.geometry?.dispose(); o.material?.map?.dispose(); }); },
+    dispose() { disposeObject(group); },
   };
 }
 
