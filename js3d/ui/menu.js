@@ -1,17 +1,22 @@
 // Startbildschirm, Pausenmenü, Einstellungen und Hilfe.
 import { h } from '../../js/ui/dom.js';
 import { fmt, eur } from '../../js/core/format.js';
+import { settingsSections } from '../core/admin.js';
+import { devSection } from './admin-ui.js';
 
-export function showStart(el, { S, source, offline, onPlay }) {
+// Titel, die Tipps zählen (für den versteckten Modus, siehe core/admin.js). Bewusst ohne jede Rückmeldung.
+const tapTitle = (el, onTap) => { if (onTap) el.addEventListener('pointerdown', () => onTap()); return el; };
+
+export function showStart(el, { S, source, offline, onPlay, onTitleTap }) {
   const migrated = source && source !== 'welt' && source !== 'new';
   el.replaceChildren(h('div', { class: 'start-box' },
-    h('div', { class: 'logo' }, 'Kanal', h('span', null, 'bucht')),
+    tapTitle(h('div', { class: 'logo' }, 'Kanal', h('span', null, 'bucht')), onTitleTap),
     h('p', { class: 'claim' }, 'Lauf über die Insel, mach Videos, kauf dir Häuser und besiege den Glitchgolem.'),
     migrated && h('p', { class: 'note' }, `✅ Dein Spielstand aus der 2D-Version wurde übernommen: ${eur(S.money)} und ${fmt(S.subs)} Abos.`),
     offline && h('p', { class: 'note' }, `😴 Während du weg warst, haben deine alten Videos ${eur(offline.money)} verdient.`),
     h('button', { class: 'big-btn', type: 'button', 'data-autofocus': true, onclick: onPlay }, source === 'welt' ? '▶ WEITER' : '▶ SPIELEN'),
     h('a', { class: 'link-btn', href: 'klassik.html' }, '🕹️ Klassik (2D-Spiel)'),
-    h('p', { class: 'small' }, 'PC: WASD laufen · Maus ziehen umsehen · E benutzen · Esc Menü. Handy: links Joystick, rechts wischen.'),
+    h('p', { class: 'small' }, 'PC: WASD laufen · Maus ziehen umsehen · E benutzen · H Hoverboard · Esc Menü. Handy: links Joystick, rechts wischen, 🛹 unten rechts.'),
   ));
   el.hidden = false;
   el.querySelector('[data-autofocus]').focus();
@@ -20,7 +25,7 @@ export function showStart(el, { S, source, offline, onPlay }) {
 export function openMenu(panels, ctx) {
   panels.open((box, close) => {
     box.append(
-      h('h2', null, '⏸ Menü'),
+      tapTitle(h('h2', { class: 'menu-title' }, '⏸ Menü'), ctx.adminTap),
       h('div', { class: 'menu-list' },
         h('button', { class: 'btn primary', type: 'button', onclick: close, 'data-autofocus': true }, '▶ Weiterspielen'),
         h('button', { class: 'btn', type: 'button', onclick: () => openSettings(panels, ctx) }, '⚙️ Einstellungen'),
@@ -36,6 +41,7 @@ const S_line = S => `${fmt(S.videos)} Videos · ${Object.values(S.houses).flat()
 
 export function openSettings(panels, ctx) {
   const S = ctx.S;
+  ctx.reopenSettings = () => openSettings(panels, ctx);
   panels.open(box => {
     const row = (label, control) => h('label', { class: 'set-row' }, h('span', null, label), control);
     const select = h('select', { onchange: e => { S.settings.graphics = e.target.value; ctx.applyGraphics(); ctx.persist(); info.textContent = graphicsInfo(); } },
@@ -53,6 +59,8 @@ export function openSettings(panels, ctx) {
       h('div', { class: 'menu-list' },
         h('button', { class: 'btn danger', type: 'button', onclick: () => confirmReset(panels, ctx) }, '🗑️ Welt-Spielstand löschen'),
         h('button', { class: 'btn primary', type: 'button', onclick: () => openMenu(panels, ctx) }, '← Zurück')),
+      // Nur vorhanden, wenn der versteckte Modus an ist
+      settingsSections(ctx.admin).includes('entwickler') && devSection(ctx),
     );
   });
 }
@@ -73,9 +81,10 @@ export function openHelp(panels, ctx) {
     h('ul', { class: 'help' },
       h('li', null, '🏠 Geh in deine Wohnung (Norden) und benutze den PC, um ein Video zu machen.'),
       h('li', null, '🔤 Drück die Buchstaben, bevor sie verschwinden. ✂️ Dann tippen, tippen, tippen. ⬆️ Dann hochladen.'),
-      h('li', null, '🛒 Im Bitbazar (rechts vom Kreisel) kaufst du PC-Teile und einen besseren Router.'),
+      h('li', null, '🛒 Im Bitbazar (rechts vom Kreisel) kaufst du PC-Teile, einen besseren Router und Hoverboards.'),
+      h('li', null, '🛹 Mit H (am Handy: Knopf unten rechts) steigst du aufs Hoverboard. Es macht dich schneller, aber nicht reicher.'),
       h('li', null, '🏖️ Häuser am Strand und auf der Insel kannst du an der Tür kaufen.'),
-      h('li', null, '🌀 Alle 5 Minuten öffnet sich das Portal im Kreisel. Weiche den roten Kreisen aus, deine Waffe schiesst von allein.'),
+      h('li', null, '🌀 Alle 5 Minuten öffnet sich das Portal im Kreisel. Weiche den roten Kreisen aus, deine Waffe schiesst von allein. Seltene Kisten können ein Hoverboard enthalten.'),
       h('li', null, '⭐ Ab 100.000 Abos gibt es Kanalknöpfe für deine Wand.')),
     h('button', { class: 'btn primary', type: 'button', onclick: () => openMenu(panels, ctx) }, '← Zurück'),
   ));

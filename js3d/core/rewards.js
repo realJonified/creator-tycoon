@@ -2,6 +2,7 @@
 import { RARITIES, CHARMS } from '../data/content.js';
 import { W } from '../data/balance.js';
 import { earn, typicalVideo } from './economy.js';
+import { chestBoards, grantBoard } from './board.js';
 
 export function rollRarity(rng = Math.random) {
   let roll = rng(), acc = 0;
@@ -26,6 +27,12 @@ export function openChest(S, rng = Math.random) {
       S.charms[charm.id] = (S.charms[charm.id] || 0) + 1;
     }
   }
+  // Hoverboard: nur bei seltenen Kisten, nur eines, das man noch nicht hat. Bringt kein Geld, nur schnellere Wege.
+  let board = null;
+  if (rarity.board && rng() < rarity.board) {
+    const pool = chestBoards(S, rarity.id);
+    if (pool.length) { board = pool[Math.floor(rng() * pool.length)]; grantBoard(S, board.id); }
+  }
   S.stats.chests++;
-  return { rarity, money, subs, charm };
+  return { rarity, money, subs, charm, board };
 }

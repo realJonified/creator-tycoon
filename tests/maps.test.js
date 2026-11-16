@@ -39,7 +39,7 @@ test('Map 1 ist die Insel aus Version 1 mit den ersten 5 Häusern, Map 2 kostet 
 
 test('Maps der Reihe nach freischalten, nur fertige und nur mit genug Geld', () => {
   const S = newState(0);
-  assert.equal(VERSION, 2);
+  assert.equal(VERSION, 3);
   assert.deepEqual(S.maps, ['bucht']);
   assert.equal(nextLockedMap(S).id, 'lagune');
   S.money = 5e12;
@@ -90,7 +90,7 @@ test('Migration v1 → v2: Häuser pro Map, Kaufpreis für weggefallene Häuser 
     tutorialDone: true, last: 123,
   };
   const S = migrate(v1, 200);
-  assert.equal(S.v, 2);
+  assert.equal(S.v, VERSION); // läuft bis zur aktuellen Version durch
   assert.equal(S.money, 1000 + REMOVED_V1_HOUSES.wald + REMOVED_V1_HOUSES.hang);
   assert.equal(S.migratedRefund, 5e8 + 5e9);
   assert.deepEqual(S.maps, ['bucht']);
@@ -121,7 +121,7 @@ test('Gespeicherter v1-Stand wird beim Laden migriert und als v2 gespeichert', (
   assert.equal(r.state.money, 7 + 5e14);
   saveWorld(st, r.state, 11);
   const again = loadWorld(st, 12).state;
-  assert.equal(again.v, 2);
+  assert.equal(again.v, VERSION);
   assert.equal(again.money, 7 + 5e14, 'Rückerstattung nur einmal');
 });
 

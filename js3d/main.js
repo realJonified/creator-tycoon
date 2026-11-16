@@ -6,6 +6,8 @@ import { createNpcs } from './scene/npcs.js';
 import { buildInterior } from './scene/interior.js';
 import { buildArena } from './scene/arena.js';
 import { createPlayer } from './scene/player.js';
+import { createHoverboard } from './scene/hoverboard.js';
+import { createRide, stepRide, boardStats, equippedBoard, buyBoard, equipBoard, findBoard } from './core/board.js';
 import { createCameraRig } from './scene/camera.js';
 import { createInput } from './scene/input.js';
 import { nearestTrigger, clearDistance } from './core/physics.js';
@@ -26,6 +28,8 @@ import { openVideo } from './ui/video-ui.js';
 import { openWorldMap } from './ui/worldmap-ui.js';
 import { createBossHud, openChest, openDefeat, openBuyHouse, openButtonWon } from './ui/boss-ui.js';
 import { findMap } from './data/maps.js';
+// Versteckter Entwickler-Modus (Test-Werkzeug, Einzelspieler, nichts online): Zustand nur im Speicher
+import { createAdmin, createTapGesture, toggleAdmin, timeScale, setMoney, setSubs, unlockAll, resetUnlocks, resetAll } from './core/admin.js';
 
 const STEP = 1 / 60;
 const $ = id => document.getElementById(id);
@@ -43,8 +47,10 @@ const engine = createEngine($('c'));
 const arena = buildArena(engine);
 const player = createPlayer(engine.scene);
 const rig = createCameraRig(engine.camera);
+const hoverboard = createHoverboard(engine.scene);
+let ride = null; // laufende Fahrt auf dem Hoverboard (null = zu Fuss). Wird nicht gespeichert.
 const audio = createAudio(() => S.settings.sound);
-const hud = createHud({ onUse: () => use(), onMenu: () => openMenu(panels, ctx) });
+const hud = createHud({ onUse: () => use(), onMenu: () => openMenu(panels, ctx), onBoard: () => toggleBoard() });
 const panels = createPanels($('panels'));
 const bossHud = createBossHud();
 
@@ -54,6 +60,7 @@ let zone = 'ground', transit = null; // Ebene auf der Map (Boden, Wolkeninsel, M
 // Aktuelle Ebene: Höhe, Grenzen, Hindernisse. Maps ohne Ebenen haben nur den Boden.
 const curZone = () => world?.zones?.[zone] || { y: 0, bounds: { x: 0, z: 0, r: mapData.walkRadius }, colliders: world.colliders };
 const buttonQueue = [];
+const admin = createAdmin(), adminGesture = createTapGesture();
 
 // Immer nur eine Map: alte entsorgen, neue bauen, dazwischen Ladebildschirm.
 const maps = createMapManager({
@@ -80,6 +87,7 @@ async function travel(id, at = null) {
   const prev = mode === 'start' ? 'start' : 'world';
   mode = 'loading';
   panels.close();
+  dismount(true);
   interior?.dispose(); interior = null;
   world = await maps.load(id);
   mapData = m;
@@ -120,6 +128,23 @@ const ctx = {
     return true;
   },
   travel: id => travel(id),
+  // Hoverboards: kaufen (rüstet gleich aus) und ausrüsten. Fährt man gerade, wechselt das Board sofort.
+  buyBoard(id) {
+    if (!buyBoard(S, id)) { audio.play('denied'); return false; }
+    audio.play('buy'); hud.toast(`🛹 ${findBoard(id).name} gehört dir und ist ausgerüstet!`);
+    ctx.boardChanged(); ctx.persist();
+    return true;
+  },
+  equipBoard(id) {
+    if (!equipBoard(S, id)) return false;
+    audio.play('nav'); ctx.boardChanged(); ctx.persist();
+    return true;
+  },
+  boardChanged() {
+    const b = equippedBoard(S);
+    if (!b) { dismount(); return; }
+    if (ride && hoverboard.swap(b)) engine.refreshQuality();
+  },
   enterArena: () => enterArena(),
   openChest() { const r = rollChest(S); ctx.persist(); return r; },
   async goHome() {
@@ -128,6 +153,16 @@ const ctx = {
     enterHouse(S.home);
   },
   reset() { S = newState(); S.tutorialDone = true; ctx.persist(); location.reload(); },
+  // ---------- Versteckter Entwickler-Modus ----------
+  admin,
+  adminTap() { if (adminGesture.tap(performance.now())) toggleAdmin(admin, S); }, // keine Rückmeldung, absichtlich
+  dev: {
+    setMoney(v) { setMoney(S, v); ctx.persist(); },
+    setSubs(v) { const got = setSubs(S, v); for (const b of got) buttonWon(b); ctx.persist(); return got.length; },
+    unlockAll() { unlockAll(S); updateSigns(); ctx.persist(); },
+    resetUnlocks() { const lost = resetUnlocks(S, admin); afterDevReset(lost); },
+    resetAll() { const lost = resetAll(S, admin); afterDevReset(lost); },
+  },
 };
 engine.onLevel = lvl => player.setBlob(lvl === 'niedrig');
 engine.setSetting(S.settings.graphics);
@@ -142,6 +177,7 @@ const input = createInput({
 addEventListener('keydown', e => {
   if (e.code === 'Escape' && !panels.isOpen && mode !== 'start' && mode !== 'loading') { e.preventDefault(); openMenu(panels, ctx); }
   if (e.code === 'F3') { e.preventDefault(); S.settings.fps = !S.settings.fps; }
+  if (e.code === 'KeyH' && !e.repeat && !e.target.closest?.('input, textarea, select') && !panels.isOpen) { e.preventDefault(); toggleBoard(); }
 });
 
 // ---------- Orte wechseln ----------
@@ -169,6 +205,7 @@ function enterWorld(at = null) {
 }
 
 function enterHouse(id, keepPos = false) {
+  dismount(true);
   const keep = keepPos ? { ...player.pos } : null;
   interior?.dispose();
   showWorld(false); arena.group.visible = false;
@@ -184,6 +221,12 @@ function enterHouse(id, keepPos = false) {
 }
 
 function enterArena() {
+  dismount(true);
+  if (admin.on && admin.skipBoss) { // Entwickler-Schalter: Kampf überspringen, direkt die Kiste
+    S.stats.bossWins++; ctx.persist();
+    openChest(panels, ctx, () => {});
+    return;
+  }
   showWorld(false); interior?.dispose(); interior = null;
   arena.reset(); arena.group.visible = true;
   engine.setUnderwater(false);
@@ -201,6 +244,26 @@ function leaveArena() {
   fight = null;
   const portal = world.triggers.find(t => t.kind === 'portal');
   enterWorld({ x: portal.x, z: portal.z + 2, yaw: 0, zone: 'ground' });
+}
+
+// ---------- Hoverboard (H / Knopf) ----------
+// Auf- und Absteigen nur draussen auf der Map. Beim Absteigen schwebt das Board noch kurz an der Stelle.
+function mount() {
+  const b = equippedBoard(S);
+  if (!b || mode !== 'world' || panels.isOpen) return false;
+  ride = createRide(player.facing);
+  if (hoverboard.mount(b)) engine.refreshQuality(); // neues Modell bekommt bei Grafik Hoch die passenden Materialien
+  audio.play('good');
+  return true;
+}
+function dismount(quiet = false) {
+  if (!ride) { if (quiet) hoverboard.hide(); return; }
+  ride = null;
+  if (quiet) hoverboard.hide(); else { hoverboard.park(); audio.play('nav'); }
+}
+function toggleBoard() {
+  if (mode === 'transit') return;
+  if (ride) dismount(); else if (!mount() && mode === 'world' && !equippedBoard(S)) hud.toast('🛹 Du hast gerade kein Hoverboard ausgerüstet.');
 }
 
 // ---------- Benutzen (E / Knopf) ----------
@@ -254,6 +317,7 @@ function startTransit(t) {
   transit = { kind: t.kind, t: 0, dur: t.kind === 'pad' ? 1.3 : 1.6, from: { x: player.pos.x, z: player.pos.z, y: player.y }, to: { ...t.to, y: target.y } };
   mode = 'transit';
   trigger = null;
+  if (ride) { ride.vx = ride.vz = 0; ride.lean = 0; }
 }
 function stepTransit(dt) {
   const tr = transit;
@@ -264,6 +328,7 @@ function stepTransit(dt) {
   const arc = tr.kind === 'pad' ? Math.sin(tr.t * Math.PI) * 9 : 0;
   player.y = tr.from.y + (tr.to.y - tr.from.y) * k + arc;
   player.root.position.set(player.pos.x, player.y, player.pos.z);
+  if (ride) player.ride(dt, ride.heading, 0, hoverboard.standHeight(), 0);
   // Unterwasser-Nebel umschalten, sobald die Figur durch die Wasseroberfläche geht
   engine.setUnderwater(false);
   if (player.y < -0.5) { engine.setUnderwater(true); } else engine.setSky(mapData.sky.top, mapData.sky.bottom, mapData.sky);
@@ -274,6 +339,14 @@ function stepTransit(dt) {
     if (zone === 'sky') hud.toast('☁️ Willkommen auf der Wolkeninsel!');
     if (zone === 'under') hud.toast('🫧 Du bist am Lagunengrund. Blubb!');
   }
+}
+
+// Nach dem Zurücksetzen: Board ggf. ablegen, auf gesperrter Map zurück in die Kanalbucht reisen
+function afterDevReset(lostMap) {
+  ctx.boardChanged();
+  updateSigns();
+  ctx.persist();
+  if (lostMap) { panels.close(); travel('bucht'); }
 }
 
 function updateSigns() {
@@ -295,14 +368,22 @@ function buttonWon(b) {
 // ---------- Spiel-Logik (fester Zeitschritt) ----------
 function logic(dt) {
   if (mode === 'start' || mode === 'loading') return;
-  for (const b of tickEconomy(S, dt)) buttonWon(b);
-  const p = tickPortal(S, dt);
+  const k = timeScale(admin); // Entwickler-Schalter "Zeit × 10" (nur Einnahmen und Portal, nicht die Bewegung)
+  for (const b of tickEconomy(S, dt * k)) buttonWon(b);
+  const p = tickPortal(S, dt * k);
   if (p === 'open') { audio.play('event'); hud.toast('🌀 Das Boss-Portal ist offen! Eine Minute Zeit.'); }
   if (p === 'close' && mode !== 'arena') hud.toast('🌀 Das Boss-Portal hat sich geschlossen.');
 
   const mv = input.read();
   if (mode === 'transit') stepTransit(dt);
-  else if (mode === 'world') { const Z = curZone(); player.update(dt, mv, mv.run, rig.yaw, Z.colliders, Z.bounds); }
+  else if (mode === 'world') {
+    const Z = curZone();
+    if (ride) {
+      const b = equippedBoard(S), st = boardStats(b, !!Z.underwater);
+      stepRide(ride, player.pos, dt, mv, rig.yaw, st, Z.colliders, Z.bounds);
+      player.ride(dt, ride.heading, ride.lean, hoverboard.standHeight(), ride.speed / b.speed);
+    } else player.update(dt, mv, mv.run, rig.yaw, Z.colliders, Z.bounds);
+  }
   if (mode === 'world' || mode === 'transit') world.npcs?.step(dt, player.pos);
   else if (mode === 'interior') { player.update(dt, mv, mv.run, rig.yaw, interior.colliders, null); interior.clamp(player.pos); }
   else if (mode === 'arena') {
@@ -344,6 +425,7 @@ function frame(now, fallback = false) {
 
   rig.update(dt, { x: player.pos.x, z: player.pos.z, y: player.y }, mode === 'world' ? (dx, dz, d) => clearDistance(player.pos, dx, dz, d, curZone().colliders) : null);
   engine.followShadow(player.pos);
+  if (mode === 'world' || mode === 'transit') hoverboard.update(dt, player.pos.x, player.pos.z, player.y, ride?.heading ?? 0, ride?.lean ?? 0, ride ? ride.speed / (equippedBoard(S)?.speed || 1) : 0, engine.level !== 'niedrig');
   if (mode === 'world' || mode === 'start' || mode === 'transit') {
     world.updatePortal?.(time, portalIsOpen(S), portalIsOpen(S) ? `OFFEN ${mmss(S.portal.open)}` : mmss(S.portal.in));
     world.update?.(time, dt);
@@ -355,6 +437,7 @@ function frame(now, fallback = false) {
 
   if (mode !== 'start') {
     hud.render(S);
+    hud.board(mode === 'world' && !!equippedBoard(S), !!ride);
     const [label, enabled] = promptFor(trigger);
     hud.prompt(label ? (isTouch() ? label : `[E] ${label}`) : null, enabled !== false);
     if (mode === 'world') S.player = { x: player.pos.x, z: player.pos.z, yaw: rig.yaw, zone };
@@ -374,6 +457,7 @@ function frame(now, fallback = false) {
   mode = 'start';
   showStart($('start'), {
     S, source: loaded.source, offline,
+    onTitleTap: () => ctx.adminTap(),
     onPlay() {
       audio.unlock();
       $('start').hidden = true;
@@ -384,10 +468,15 @@ function frame(now, fallback = false) {
         hud.toast(`🏡 Update 2: Häuser ab Nr. 6 stehen nicht mehr auf der Insel. Du hast ${eur(S.migratedRefund)} zurückbekommen.`);
         delete S.migratedRefund;
       }
+      if (S.boardHint) {
+        hud.toast(`🛹 Update 3: Du hast ein Hoverboard! ${isTouch() ? 'Knopf unten rechts' : 'Taste H'} zum Auf- und Absteigen.`);
+        delete S.boardHint;
+      }
       if (!S.tutorialDone) {
         S.tutorialDone = true;
         hud.toast('👋 Willkommen in der Kanalbucht! Deine Wohnung liegt im Norden, hinter dem Kreisel.');
         hud.toast('🎬 Geh hinein und benutze den PC für dein erstes Video.');
+        hud.toast(`🛹 Schneller unterwegs: ${isTouch() ? 'Knopf unten rechts' : 'Taste H'} fürs Hoverboard.`);
       }
       ctx.persist();
     },
@@ -402,7 +491,8 @@ addEventListener('pagehide', () => { if (mode !== 'start') ctx.persist(); });
 globalThis.kanalbucht = {
   get S() { return S; }, ctx, engine, player, rig, input, panels, maps,
   get world() { return world; }, get mode() { return mode; }, get zone() { return zone; }, get fight() { return fight; }, get trigger() { return trigger; },
-  use, enterHouse, enterArena, enterWorld, travel,
+  use, enterHouse, enterArena, enterWorld, travel, toggleBoard, hoverboard,
+  get ride() { return ride; },
   // Nur zum Testen: Map laden, auch wenn sie noch gesperrt ist
   async forceMap(id) { if (!S.maps.includes(id)) S.maps.push(id); await travel(id); },
   openPortal() { S.portal.in = 0.1; S.portal.open = 0; },

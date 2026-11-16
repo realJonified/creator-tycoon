@@ -33,6 +33,21 @@ export const HOUSES = ALL_HOUSES;
 // Wer sie besass, bekommt bei der Migration den Kaufpreis zurück.
 export const REMOVED_V1_HOUSES = { wald: 5e8, hang: 5e9, teich: 5e10, glas: 5e11, burg: 5e12, himmel: 5e13, krone: 5e14 };
 
+// Hoverboards (Update 3). Aussehen: deck = Deckfarbe, glow = Leuchtrand und Schwebepolster, glow2 = Zierstreifen,
+// trail = Spur (none, glow = weicher Schein, sparks = Funken, stars = Funken und Sterne in zwei Farben).
+// price aus balance.js: kaufbar im Shop. Ohne Preis: nur aus Boss-Kisten. Das erste Board hat jeder von Anfang an.
+export const BOARDS = [
+  { id: 'kiesel',       name: 'Kieselgleiter', rarity: 'gewoehnlich', deck: '#64748b', glow: '#5eead4', trail: 'none' },
+  { id: 'brise',        name: 'Brisenbrett',   rarity: 'gewoehnlich', deck: '#e2e8f0', glow: '#38bdf8', trail: 'none' },
+  { id: 'koralle',      name: 'Korallenkufe',  rarity: 'selten',      deck: '#fb7185', glow: '#fecdd3', glow2: '#fde68a', trail: 'glow' },
+  { id: 'polar',        name: 'Polarpfeil',    rarity: 'selten',      deck: '#e0f2fe', glow: '#7dd3fc', glow2: '#ffffff', trail: 'glow' },
+  { id: 'nordlicht',    name: 'Nordlicht',     rarity: 'episch',      deck: '#1e1b4b', glow: '#4ade80', glow2: '#a78bfa', trail: 'sparks' },
+  { id: 'funkenflug',   name: 'Funkenflug',    rarity: 'episch',      deck: '#7c2d12', glow: '#fb923c', glow2: '#fde047', trail: 'sparks' },
+  { id: 'sonnenwind',   name: 'Sonnenwind',    rarity: 'legendaer',   deck: '#fef3c7', glow: '#facc15', glow2: '#fb923c', trail: 'stars' },
+  { id: 'sternenstaub', name: 'Sternenstaub',  rarity: 'legendaer',   deck: '#0f172a', glow: '#e879f9', glow2: '#67e8f9', trail: 'stars' },
+].map(b => ({ icon: '🛹', ...b, ...W.boards[b.id], price: W.boardPrices[b.id] ?? null }));
+export const STARTER_BOARD = 'kiesel';
+
 // Play-Buttons: Meilensteine nach Abonnenten. Eigenes Design (Stern im Rahmen), Farbe = Material.
 export const BUTTONS = [
   { id: 'silber',   name: 'Silberner Kanalknopf',   subs: W.buttonSubs[0], color: '#d7dde4' },

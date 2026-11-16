@@ -15,6 +15,7 @@ function part(w, h, d, color, x, y, z, parent) {
 
 export function createPlayer(scene) {
   const root = new THREE.Group();
+  root.rotation.order = 'YXZ'; // Richtung, dann Neigung (auf dem Hoverboard)
   const body = new THREE.Group();
   root.add(body);
   // Beine und Arme hängen an Gelenken, damit sie schwingen können.
@@ -71,6 +72,7 @@ export function createPlayer(scene) {
         facing += diff * Math.min(1, dt * 12);
       }
       resolve(pos, RADIUS, colliders, bounds);
+      armL.rotation.z = armR.rotation.z = 0; root.rotation.z = 0; // falls vorher auf dem Board
       speedNow += (target - speedNow) * Math.min(1, dt * 10);
       phase += dt * (4 + speedNow * 1.2);
       const swing = Math.min(1, speedNow / WALK) * 0.75;
@@ -79,6 +81,19 @@ export function createPlayer(scene) {
       body.position.y = Math.abs(Math.sin(phase)) * swing * 0.09 + (speedNow < 0.2 ? Math.sin(phase * 0.5) * 0.015 : 0);
       root.position.set(pos.x, y, pos.z);
       root.rotation.y = facing;
+    },
+
+    // Auf dem Hoverboard stehen: leicht in den Knien, Arme zur Seite, mit dem Board in die Kurve lehnen.
+    // lift = Höhe der Deck-Oberkante über dem Boden, speed01 = Tempo 0..1
+    ride(dt, heading, lean, lift, speed01) {
+      facing = heading; speedNow = 0;
+      phase += dt * 2;
+      legL.rotation.x = 0.25; legR.rotation.x = -0.25;
+      armL.rotation.x = armR.rotation.x = -0.15 - speed01 * 0.35;
+      armL.rotation.z = -0.55 - lean * 0.8; armR.rotation.z = 0.55 - lean * 0.8;
+      body.position.y = -0.06 + Math.sin(phase) * 0.012;
+      root.position.set(pos.x, y + lift + 0.05, pos.z);
+      root.rotation.y = heading; root.rotation.z = -lean;
     },
   };
 }

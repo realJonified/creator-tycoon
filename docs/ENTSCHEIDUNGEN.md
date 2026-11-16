@@ -2,6 +2,78 @@
 
 Eine Zeile pro Annahme, die ich ohne Rückfrage getroffen habe.
 
+## Update 3 (Branch welt-v3)
+- `welt-v3` baut auf `welt-v2` auf (Update 2 war beim Start noch nicht in `main` gemergt).
+
+### Etappe 1: Hoverboard-Grundfunktion
+- Die Fahrphysik ist reine Logik in `js3d/core/board.js` (ohne three.js, in Node getestet):
+  - Das Board hat eine Richtung und eine Geschwindigkeit. Es dreht sich höchstens mit seiner Wendigkeit (rad/s) zur gewünschten Richtung und beschleunigt in seine eigene Richtung. Seitliches Rutschen baut sich schnell ab (`grip`).
+  - Ohne Eingabe bremst die Reibung bis zum Stillstand. Das Höchsttempo hängt vom Joystick ab (halb gedrückt = halbes Tempo).
+  - Wände: Die vorhandene Kollision (`physics.js`) schiebt das Board heraus. Der Anteil der Geschwindigkeit in die Wand hinein fällt weg, mit etwas Abprallen. Die Bewegung läuft in Schritten von höchstens 0,2 Einheiten, deshalb rutscht man auch bei hohem Tempo nicht durch dünne Wände (Test mit Tempo 200).
+- Alle Zahlen stehen in `js3d/data/balance.js` (`W.board`, `W.boards`). Das erste Board „Kieselgleiter“ fährt 14 Einheiten/s (gehen 6, rennen 10).
+- Das erste Board bekommt jeder geschenkt, neue Spieler und alte Spielstände. Stufe 1 soll das Board ohne Shop testbar machen. Kaufbare und seltene Boards kommen in Etappe 2.
+- Spielstand Version 3: `boards` (Besitz) und `board` (ausgerüstet, `null` = keins). Die Migration 2 → 3 gibt das erste Board und zeigt einmal einen Hinweis. Ob man gerade fährt, wird nicht gespeichert: Nach dem Laden steht man immer zu Fuss da.
+- Auf- und Absteigen mit H oder dem runden Knopf unten rechts (am Handy grösser, ohne Tastenhinweis). Beim Absteigen schwebt das Board noch 3 Sekunden an der Stelle und schrumpft dann weg. H holt es sofort zurück unter die Füsse.
+- Ebenen: Sprungpads, Tauchsteg und Auftauchen funktionieren auch auf dem Board, man bleibt dabei stehen. Die Ebenen sind flach, echte Schrägen gibt es nicht. Die „Rampen“ sind deshalb die Sprungpads. Unter Wasser fährt das Board mit 55 % Tempo und Beschleunigung (gemessen: 7,7 statt 14). In Häusern, in der Arena und beim Map-Wechsel steigt man automatisch ab.
+- Das Board ändert nichts an Geld oder Abos (Test: Einnahmen mit und ohne Board gleich).
+- Modell aus einfachen Formen: flach gedrückte Kapsel als Deck, leuchtender Rand, Griffband, zwei leuchtende Schwebepolster und ein Lichtschein am Boden. Es schwebt mit leichtem Wippen und neigt sich in Kurven, die Figur lehnt mit. Pro Board-Art gibt es genau ein Modell. Es hängt an der Szene, nicht an der Map, und übersteht deshalb jeden Map-Wechsel ohne Neubau.
+- **Messung** (Map 1, 1280 × 800, `kanalbucht.engine.benchmark(120)`, RTX 5080):
+
+  | Stufe | ohne Board | mit Board |
+  |---|---|---|
+  | Niedrig | 48 Draw-Calls, 15.800 Dreiecke, 0,89 ms | 53 Draw-Calls, 17.000 Dreiecke, 0,84 ms |
+  | Mittel | 85 Draw-Calls, 38.900 Dreiecke, 1,27 ms | 92 Draw-Calls, 40.700 Dreiecke, 1,08 ms |
+  | Hoch | 99 Draw-Calls, 127.500 Dreiecke, 2,03 ms | 106 Draw-Calls, 129.300 Dreiecke, 1,22 ms |
+
+  Das Board kostet 5 bis 7 Draw-Calls (mit Schatten) und etwa 1.500 Dreiecke. Die Zeitunterschiede liegen im Messrauschen dieser schnellen Grafikkarte. Dass „mit Board“ schneller wirkt, ist Zufall. Es gibt noch keine Spur. Sie kommt in Etappe 2 und ist bei Niedrig aus.
+
+### Etappe 2: Mehrere Boards, Shop, Kisten
+- Acht Boards in vier Seltenheiten, je Seltenheit eines aus dem Shop und eines nur aus Boss-Kisten. Bei Gewöhnlich ist das zweite das geschenkte erste Board.
+
+  | Board | Seltenheit | Bezug | Tempo | Wendigkeit | Spur |
+  |---|---|---|---|---|---|
+  | Kieselgleiter | Gewöhnlich | geschenkt | 14 | 3,0 | keine |
+  | Brisenbrett | Gewöhnlich | 25 Tsd. € | 15 | 3,3 | keine |
+  | Korallenkufe | Selten | 2,5 Mio. € | 17 | 3,6 | Leuchtspur |
+  | Polarpfeil | Selten | Kiste | 17 | 4,2 | Leuchtspur |
+  | Nordlicht | Episch | 500 Mio. € | 20 | 4,0 | Funken |
+  | Funkenflug | Episch | Kiste | 20 | 4,4 | Funken |
+  | Sonnenwind | Legendär | 50 Mrd. € | 23 | 4,6 | Sterne |
+  | Sternenstaub | Legendär | Kiste | 24 | 4,9 | Sterne |
+
+- Preise, Fahrwerte und Kisten-Chancen stehen in `js3d/data/balance.js` (`boards`, `boardPrices`, `rarities.*.board`), Namen und Farben in `content.js`.
+- Die Shop-Preise liegen ungefähr bei dem Geld, das man zur jeweiligen Zeit hat: 25 Tsd. nach etwa 20 Minuten, 2,5 Mio. vor Haus 4, 500 Mio. nach Map 1, 50 Mrd. auf dem Weg zur Billion. Ein Board kostet also spürbar Geld, das dann für Häuser fehlt. Das Balancing-Skript kauft keine Boards, weil sie kein Geld bringen. Die Zeiten dort gelten für Spieler ohne Board-Käufe.
+- Kisten: Bei Selten 15 %, Episch 40 %, Legendär 60 % Chance auf ein Kisten-Board dieser Seltenheit, nur eines, das man noch nicht hat. Pro Bosssieg sind das im Schnitt 3,3 % (Selten), 2 % (Episch) und 0,6 % (Legendär). Ein Board aus der Kiste wird nicht automatisch ausgerüstet. Gekaufte schon, weil man sie gerade bewusst gewählt hat. Gewöhnliche Kisten würfeln nicht nach einem Board, deshalb ändert sich die Zufallsfolge nur bei seltenen Kisten. Die Balancing-Ziele sind weiter erfüllt (Test).
+- Aussehen: Je seltener, desto mehr Schmuck. Selten hat Mittelstreifen und Heckflossen, Episch zusätzlich Seitenleuchten und grössere Polster, Legendär einen schwebenden, drehenden Ring und pulsierendes Leuchten. Pro Board werden die Formen zu zwei Meshes zusammengefügt (Deck matt, Leuchtteile unbeleuchtet), dazu der Lichtschein und bei Legendär der Ring. Das sind weniger Draw-Calls als in Etappe 1.
+- Spur: Es gibt EIN Partikelsystem für alle Boards mit höchstens 120 Teilchen (`W.trailMax`). Es braucht einen Draw-Call. Teilchen entstehen nur beim Fahren, mehr bei höherem Tempo. Bei Grafik Niedrig ist die Spur aus. Additive Teilchen waren vor hellem Gras kaum zu sehen, deshalb haben sie jetzt normale Deckkraft (RGBA pro Teilchen) und einen hellen Kern.
+- Shop: Der Bitbazar hat zwei Reiter, PC-Teile und Hoverboards. Jedes Board zeigt Vorschaufarben, Seltenheit, Spur und Balken für Tempo, Antrieb und Wendigkeit. Kauft man während der Fahrt ein anderes Board oder rüstet es aus, wechselt das Modell sofort.
+- **Messung** (Map 1, 1280 × 800, fahrend, RTX 5080):
+
+  | Stufe | zu Fuss | Kieselgleiter | Sternenstaub (mit Spur) |
+  |---|---|---|---|
+  | Niedrig | 48 Calls, 0,94 ms | 49 Calls, 1,09 ms | 50 Calls, 0,56 ms (Spur aus) |
+  | Mittel | 85 Calls, 0,78 ms | 88 Calls, 0,79 ms | 90 Calls, 0,80 ms, 37 Teilchen |
+  | Hoch | 99 Calls, 1,25 ms | 102 Calls, 1,23 ms | 104 Calls, 1,22 ms, 34 Teilchen |
+
+  Ein Board kostet jetzt 1 bis 5 Draw-Calls (mit Schatten und Spur) und höchstens 1.700 Dreiecke. Die Zeitunterschiede sind wieder Messrauschen.
+
+### Etappe 3: Versteckter Entwickler-Modus
+- Ein Test- und Entwicklerwerkzeug für das eigene Einzelspieler-Spiel. Es gibt keine Online-Funktionen, also keine Auswirkung auf andere Spieler. So steht es auch als Kommentar im Code (`js3d/core/admin.js`, `js3d/ui/admin-ui.js`).
+- Geste: 20 Tipps auf den Titel, höchstens 1 s zwischen zwei Tipps (genau 1,0 s zählt noch, mehr setzt den Zähler zurück). Gezählt wird beim Herunterdrücken (`pointerdown`), damit schnelles Tippen am Handy nicht verzögert wird. „Titel im Hauptmenü“ ist der Schriftzug „Kanalbucht“ auf dem Startbildschirm und die Überschrift „Menü“ im Pausenmenü. Beide zählen in denselben Zähler.
+- Keine Rückmeldung: kein Ton, keine Meldung, keine Änderung an der Oberfläche. Im Browser geprüft: Das HTML des Menüs ist nach 20 Klicks identisch. Damit schnelles Klicken den Titel nicht blau markiert, sind die beiden Titel nicht markierbar und leuchten beim Tippen nicht auf.
+- Der Bereich „Entwickler“ in den Einstellungen wird nur gebaut, wenn der Modus an ist. Ist er aus, gibt es kein verstecktes Element im Dokument. Das Wort „Admin“ kommt nur im Code vor. Ein Test durchsucht die Texte der Oberfläche danach.
+- Der Modus lebt nur im Arbeitsspeicher, nicht im Spielstand und nicht im Browser-Speicher. Nach dem Neuladen ist er aus. Gesetzte Werte bleiben wie normaler Fortschritt im Spielstand.
+- Zurücksetzen: Beim ersten Einschalten in einer Sitzung merkt sich das Spiel Geld, Abos, Kanalknöpfe, Maps, Häuser und Boards.
+  - „Entwicklerdaten zurücksetzen“ stellt diesen Stand wieder her und schaltet „Bosskampf überspringen“ und „Zeit × 10“ aus.
+  - „Freischaltungen zurücksetzen“ stellt nur Maps, Häuser und Boards wieder her, Geld und Abos bleiben.
+  - Nach dem Neuladen ist dieser Merker weg. Dann gibt es nichts mehr zurückzusetzen, die Werte sind normaler Fortschritt.
+  - Liegt man nach dem Zurücksetzen auf einer wieder gesperrten Map, reist das Spiel in die Kanalbucht.
+- Grosse Zahlen: Eingabe als Zahl plus Einheit (Tsd. bis Dezilliarde, 10^63). Die Eingabe wird mit BigInt exakt eingelesen und angezeigt, z. B. „100'000 Trilliarden = 100 Quadr. € (100'000'000'000'000'000'000'000'000)“. Erst danach wird sie zur normalen Zahl (double). Das Spiel rechnet weiter mit doubles: Begründung siehe Etappe 5 von Update 2, Obergrenze 1e300. Erlaubt sind Apostroph, Leerzeichen und Punkte als Tausendertrenner, das Komma als Dezimalzeichen und `e` (z. B. `3e9`). Beträge unter 1 € fallen weg.
+- Die Anzeige (`js/core/format.js`) kennt jetzt Kurzformen bis „Dezd.“ (10^63), darüber kommt die wissenschaftliche Schreibweise. Vorher war ab 10^36 Schluss. Das gilt auch für Klassik, dort ändert sich nur die Anzeige sehr grosser Zahlen.
+- Abos setzen vergibt sofort alle Kanalknöpfe, deren Schwelle erreicht ist, mit der normalen Meldung. Senkt man die Abos, bleiben verdiente Knöpfe (wie im normalen Spiel). Weg gehen sie nur mit „Entwicklerdaten zurücksetzen“. Neue Video-Spiele hängen direkt an den Abos und sind sofort frei.
+- „Alles freischalten“: alle fertigen Maps (Frostgipfel ist noch ein Gerüst und bleibt zu), alle Häuser darauf und alle 8 Boards.
+- „Bosskampf überspringen“: Das Boss-Portal öffnet direkt die Kiste und zählt als Sieg. „Zeit × 10“ beschleunigt nur Einnahmen, Spielzeit und Portal-Countdown, nicht das Laufen.
+
 ## Update 2 (Branch welt-v2)
 
 ### Etappe 1: Map-System

@@ -71,12 +71,13 @@ export const W = {
 
   // ---------- Boss-Kiste ----------
   // odds = Wahrscheinlichkeit (Summe 1), videos = Geld im Wert so vieler normaler Videos,
-  // subs = Anteil der eigenen Abos dazu, charm = Chance auf einen Glücksbringer
+  // subs = Anteil der eigenen Abos dazu, charm = Chance auf einen Glücksbringer,
+  // board = Chance auf ein Kisten-Board dieser Seltenheit (nur eines, das man noch nicht hat)
   rarities: {
-    gewoehnlich: { odds: 0.72, videos: 2,  subs: 0,    charm: 0 },
-    selten:      { odds: 0.22, videos: 6,  subs: 0.01, charm: 0 },
-    episch:      { odds: 0.05, videos: 20, subs: 0.03, charm: 1 },
-    legendaer:   { odds: 0.01, videos: 80, subs: 0.1,  charm: 1 },
+    gewoehnlich: { odds: 0.72, videos: 2,  subs: 0,    charm: 0, board: 0 },
+    selten:      { odds: 0.22, videos: 6,  subs: 0.01, charm: 0, board: 0.15 },
+    episch:      { odds: 0.05, videos: 20, subs: 0.03, charm: 1, board: 0.4 },
+    legendaer:   { odds: 0.01, videos: 80, subs: 0.1,  charm: 1, board: 0.6 },
   },
   charms: { kleeblatt: 0.1, kristall: 0.1, krone: 0.5 }, // Aufrufe-Bonus pro Stück
 
@@ -92,6 +93,33 @@ export const W = {
   attackRadius: 3.2,
   attackDamage: 34,       // drei Treffer und man verliert
   arenaRadius: 17,
+
+  // ---------- Hoverboards (Update 3) ----------
+  // Ein Board verkürzt nur Wege, es bringt kein Geld. Zum Vergleich: gehen 6, rennen 10 Einheiten/s.
+  board: {
+    hover: 0.38,          // so hoch schwebt das Deck über dem Boden
+    friction: 1.4,        // Abbremsen ohne Eingabe (pro Sekunde, exponentiell)
+    grip: 4.5,            // wie schnell die Fahrt in Blickrichtung des Boards einschwenkt (weniger = mehr Rutschen)
+    bounce: 0.25,         // Abprallen an Wänden (0 = kleben, 1 = voll zurück)
+    maxLean: 0.32,        // Neigung in Kurven (rad)
+    underwater: 0.55,     // unter Wasser: Tempo und Beschleunigung × diesen Faktor
+    parkSeconds: 3,       // nach dem Absteigen schwebt das Board noch so lange an der Stelle
+  },
+  // Pro Board: speed = Höchsttempo, accel = Beschleunigung, turn = Wendigkeit (rad/s)
+  boards: {
+    kiesel:       { speed: 14, accel: 16, turn: 3.0 },  // gewöhnlich, hat jeder
+    brise:        { speed: 15, accel: 18, turn: 3.3 },  // gewöhnlich, Shop
+    koralle:      { speed: 17, accel: 21, turn: 3.6 },  // selten, Shop
+    polar:        { speed: 17, accel: 20, turn: 4.2 },  // selten, nur Kiste (wendiger)
+    nordlicht:    { speed: 20, accel: 25, turn: 4.0 },  // episch, Shop
+    funkenflug:   { speed: 20, accel: 27, turn: 4.4 },  // episch, nur Kiste
+    sonnenwind:   { speed: 23, accel: 30, turn: 4.6 },  // legendär, Shop
+    sternenstaub: { speed: 24, accel: 33, turn: 4.9 },  // legendär, nur Kiste
+  },
+  // Shop-Preise (teurer je Seltenheit). Boards ohne Preis gibt es nur aus Boss-Kisten.
+  boardPrices: { brise: 25e3, koralle: 2.5e6, nordlicht: 5e8, sonnenwind: 5e10 },
+  // Spur hinter dem Board: höchstens so viele Teilchen gleichzeitig (bei Grafik Niedrig keine Spur)
+  trailMax: 120,
 
   maxValue: 1e300,        // Obergrenze, damit nie "Infinity" im Spielstand landet
 };
