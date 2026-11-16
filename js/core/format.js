@@ -1,5 +1,7 @@
 // Zahlenformat auf Deutsch, ohne Intl (läuft überall gleich).
-const UNITS = ['', 'Tsd.', 'Mio.', 'Mrd.', 'Bio.', 'Brd.', 'Trill.', 'Trd.', 'Quadr.', 'Quadrd.', 'Quint.', 'Quintd.'];
+// Lange Skala bis Dezilliarde (10^63), darüber wissenschaftlich (z. B. 1,5e70).
+const UNITS = ['', 'Tsd.', 'Mio.', 'Mrd.', 'Bio.', 'Brd.', 'Trill.', 'Trd.', 'Quadr.', 'Quadrd.', 'Quint.', 'Quintd.',
+  'Sext.', 'Sextd.', 'Sept.', 'Septd.', 'Okt.', 'Oktd.', 'Non.', 'Nond.', 'Dez.', 'Dezd.'];
 
 // Schneidet auf "digits" Nachkommastellen ab (rundet nie auf) und nutzt ein Komma.
 function cut(value, digits) {

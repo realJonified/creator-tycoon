@@ -57,6 +57,23 @@ Eine Zeile pro Annahme, die ich ohne Rückfrage getroffen habe.
 
   Ein Board kostet jetzt 1 bis 5 Draw-Calls (mit Schatten und Spur) und höchstens 1.700 Dreiecke. Die Zeitunterschiede sind wieder Messrauschen.
 
+### Etappe 3: Versteckter Entwickler-Modus
+- Ein Test- und Entwicklerwerkzeug für das eigene Einzelspieler-Spiel. Es gibt keine Online-Funktionen, also keine Auswirkung auf andere Spieler. So steht es auch als Kommentar im Code (`js3d/core/admin.js`, `js3d/ui/admin-ui.js`).
+- Geste: 20 Tipps auf den Titel, höchstens 1 s zwischen zwei Tipps (genau 1,0 s zählt noch, mehr setzt den Zähler zurück). Gezählt wird beim Herunterdrücken (`pointerdown`), damit schnelles Tippen am Handy nicht verzögert wird. „Titel im Hauptmenü“ ist der Schriftzug „Kanalbucht“ auf dem Startbildschirm und die Überschrift „Menü“ im Pausenmenü. Beide zählen in denselben Zähler.
+- Keine Rückmeldung: kein Ton, keine Meldung, keine Änderung an der Oberfläche. Im Browser geprüft: Das HTML des Menüs ist nach 20 Klicks identisch. Damit schnelles Klicken den Titel nicht blau markiert, sind die beiden Titel nicht markierbar und leuchten beim Tippen nicht auf.
+- Der Bereich „Entwickler“ in den Einstellungen wird nur gebaut, wenn der Modus an ist. Ist er aus, gibt es kein verstecktes Element im Dokument. Das Wort „Admin“ kommt nur im Code vor. Ein Test durchsucht die Texte der Oberfläche danach.
+- Der Modus lebt nur im Arbeitsspeicher, nicht im Spielstand und nicht im Browser-Speicher. Nach dem Neuladen ist er aus. Gesetzte Werte bleiben wie normaler Fortschritt im Spielstand.
+- Zurücksetzen: Beim ersten Einschalten in einer Sitzung merkt sich das Spiel Geld, Abos, Kanalknöpfe, Maps, Häuser und Boards.
+  - „Entwicklerdaten zurücksetzen“ stellt diesen Stand wieder her und schaltet „Bosskampf überspringen“ und „Zeit × 10“ aus.
+  - „Freischaltungen zurücksetzen“ stellt nur Maps, Häuser und Boards wieder her, Geld und Abos bleiben.
+  - Nach dem Neuladen ist dieser Merker weg. Dann gibt es nichts mehr zurückzusetzen, die Werte sind normaler Fortschritt.
+  - Liegt man nach dem Zurücksetzen auf einer wieder gesperrten Map, reist das Spiel in die Kanalbucht.
+- Grosse Zahlen: Eingabe als Zahl plus Einheit (Tsd. bis Dezilliarde, 10^63). Die Eingabe wird mit BigInt exakt eingelesen und angezeigt, z. B. „100'000 Trilliarden = 100 Quadr. € (100'000'000'000'000'000'000'000'000)“. Erst danach wird sie zur normalen Zahl (double). Das Spiel rechnet weiter mit doubles: Begründung siehe Etappe 5 von Update 2, Obergrenze 1e300. Erlaubt sind Apostroph, Leerzeichen und Punkte als Tausendertrenner, das Komma als Dezimalzeichen und `e` (z. B. `3e9`). Beträge unter 1 € fallen weg.
+- Die Anzeige (`js/core/format.js`) kennt jetzt Kurzformen bis „Dezd.“ (10^63), darüber kommt die wissenschaftliche Schreibweise. Vorher war ab 10^36 Schluss. Das gilt auch für Klassik, dort ändert sich nur die Anzeige sehr grosser Zahlen.
+- Abos setzen vergibt sofort alle Kanalknöpfe, deren Schwelle erreicht ist, mit der normalen Meldung. Senkt man die Abos, bleiben verdiente Knöpfe (wie im normalen Spiel). Weg gehen sie nur mit „Entwicklerdaten zurücksetzen“. Neue Video-Spiele hängen direkt an den Abos und sind sofort frei.
+- „Alles freischalten“: alle fertigen Maps (Frostgipfel ist noch ein Gerüst und bleibt zu), alle Häuser darauf und alle 8 Boards.
+- „Bosskampf überspringen“: Das Boss-Portal öffnet direkt die Kiste und zählt als Sieg. „Zeit × 10“ beschleunigt nur Einnahmen, Spielzeit und Portal-Countdown, nicht das Laufen.
+
 ## Update 2 (Branch welt-v2)
 
 ### Etappe 1: Map-System

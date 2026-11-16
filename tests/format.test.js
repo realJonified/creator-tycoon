@@ -26,7 +26,10 @@ test('springt an der Grenze nie auf "1000 Tsd."', () => {
 
 test('sehr grosse Zahlen und Sonderfälle', () => {
   assert.equal(fmt(1e33), '1 Quintd.');
-  assert.equal(fmt(1.5e40), '1,5e40');
+  assert.equal(fmt(1.5e40), '15 Sextd.');
+  assert.equal(fmt(1e63), '1 Dezd.');
+  assert.equal(fmt(999.9e63), '999,9 Dezd.');
+  assert.equal(fmt(1.5e70), '1,5e70');
   assert.equal(fmt(1e300), '1e300');
   assert.equal(fmt(Infinity), '∞');
   assert.equal(fmt(NaN), '0');

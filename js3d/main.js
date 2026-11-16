@@ -28,6 +28,8 @@ import { openVideo } from './ui/video-ui.js';
 import { openWorldMap } from './ui/worldmap-ui.js';
 import { createBossHud, openChest, openDefeat, openBuyHouse, openButtonWon } from './ui/boss-ui.js';
 import { findMap } from './data/maps.js';
+// Versteckter Entwickler-Modus (Test-Werkzeug, Einzelspieler, nichts online): Zustand nur im Speicher
+import { createAdmin, createTapGesture, toggleAdmin, timeScale, setMoney, setSubs, unlockAll, resetUnlocks, resetAll } from './core/admin.js';
 
 const STEP = 1 / 60;
 const $ = id => document.getElementById(id);
@@ -58,6 +60,7 @@ let zone = 'ground', transit = null; // Ebene auf der Map (Boden, Wolkeninsel, M
 // Aktuelle Ebene: Höhe, Grenzen, Hindernisse. Maps ohne Ebenen haben nur den Boden.
 const curZone = () => world?.zones?.[zone] || { y: 0, bounds: { x: 0, z: 0, r: mapData.walkRadius }, colliders: world.colliders };
 const buttonQueue = [];
+const admin = createAdmin(), adminGesture = createTapGesture();
 
 // Immer nur eine Map: alte entsorgen, neue bauen, dazwischen Ladebildschirm.
 const maps = createMapManager({
@@ -150,6 +153,16 @@ const ctx = {
     enterHouse(S.home);
   },
   reset() { S = newState(); S.tutorialDone = true; ctx.persist(); location.reload(); },
+  // ---------- Versteckter Entwickler-Modus ----------
+  admin,
+  adminTap() { if (adminGesture.tap(performance.now())) toggleAdmin(admin, S); }, // keine Rückmeldung, absichtlich
+  dev: {
+    setMoney(v) { setMoney(S, v); ctx.persist(); },
+    setSubs(v) { const got = setSubs(S, v); for (const b of got) buttonWon(b); ctx.persist(); return got.length; },
+    unlockAll() { unlockAll(S); updateSigns(); ctx.persist(); },
+    resetUnlocks() { const lost = resetUnlocks(S, admin); afterDevReset(lost); },
+    resetAll() { const lost = resetAll(S, admin); afterDevReset(lost); },
+  },
 };
 engine.onLevel = lvl => player.setBlob(lvl === 'niedrig');
 engine.setSetting(S.settings.graphics);
@@ -209,6 +222,11 @@ function enterHouse(id, keepPos = false) {
 
 function enterArena() {
   dismount(true);
+  if (admin.on && admin.skipBoss) { // Entwickler-Schalter: Kampf überspringen, direkt die Kiste
+    S.stats.bossWins++; ctx.persist();
+    openChest(panels, ctx, () => {});
+    return;
+  }
   showWorld(false); interior?.dispose(); interior = null;
   arena.reset(); arena.group.visible = true;
   engine.setUnderwater(false);
@@ -323,6 +341,14 @@ function stepTransit(dt) {
   }
 }
 
+// Nach dem Zurücksetzen: Board ggf. ablegen, auf gesperrter Map zurück in die Kanalbucht reisen
+function afterDevReset(lostMap) {
+  ctx.boardChanged();
+  updateSigns();
+  ctx.persist();
+  if (lostMap) { panels.close(); travel('bucht'); }
+}
+
 function updateSigns() {
   const nh = nextHouse(S);
   for (const s of world?.houseSigns || []) {
@@ -342,8 +368,9 @@ function buttonWon(b) {
 // ---------- Spiel-Logik (fester Zeitschritt) ----------
 function logic(dt) {
   if (mode === 'start' || mode === 'loading') return;
-  for (const b of tickEconomy(S, dt)) buttonWon(b);
-  const p = tickPortal(S, dt);
+  const k = timeScale(admin); // Entwickler-Schalter "Zeit × 10" (nur Einnahmen und Portal, nicht die Bewegung)
+  for (const b of tickEconomy(S, dt * k)) buttonWon(b);
+  const p = tickPortal(S, dt * k);
   if (p === 'open') { audio.play('event'); hud.toast('🌀 Das Boss-Portal ist offen! Eine Minute Zeit.'); }
   if (p === 'close' && mode !== 'arena') hud.toast('🌀 Das Boss-Portal hat sich geschlossen.');
 
@@ -430,6 +457,7 @@ function frame(now, fallback = false) {
   mode = 'start';
   showStart($('start'), {
     S, source: loaded.source, offline,
+    onTitleTap: () => ctx.adminTap(),
     onPlay() {
       audio.unlock();
       $('start').hidden = true;

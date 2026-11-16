@@ -186,3 +186,18 @@ button, select, input { font: inherit; color: inherit; }
 .map-tag { font-weight: 700; font-size: .85rem; white-space: nowrap; }
 .map-tag.here { color: #0e7490; }
 @media (max-width: 420px) { .map-card { flex-wrap: wrap; } .map-card > :last-child { width: 100%; } }
+
+/* Titel ohne Markieren und ohne Tipp-Aufleuchten (auch beim schnellen Tippen keine Veränderung) */
+.logo, .menu-title { user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+/* Entwickler-Bereich */
+.dev { margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--line); display: flex; flex-direction: column; gap: 8px; }
+.dev h3 { margin: 0; font-size: 1.05rem; }
+.dev-amount { display: flex; flex-direction: column; gap: 4px; }
+.dev-label { font-weight: 700; }
+.dev-inputs { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; }
+.dev-inputs input, .dev-inputs select { min-height: 42px; border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; background: transparent; color: inherit; font: inherit; min-width: 0; }
+.dev-inputs select { max-width: 9.5em; }
+.dev-inputs select option { color: #111827; }
+.dev-preview { overflow-wrap: anywhere; }
+.dev-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+@media (max-width: 420px) { .dev-inputs { grid-template-columns: 1fr auto; } .dev-inputs .btn { grid-column: 1 / -1; } .dev-buttons { grid-template-columns: 1fr; } }
