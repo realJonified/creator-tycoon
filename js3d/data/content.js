@@ -33,6 +33,13 @@ export const HOUSES = ALL_HOUSES;
 // Wer sie besass, bekommt bei der Migration den Kaufpreis zurück.
 export const REMOVED_V1_HOUSES = { wald: 5e8, hang: 5e9, teich: 5e10, glas: 5e11, burg: 5e12, himmel: 5e13, krone: 5e14 };
 
+// Hoverboards (Update 3). Aussehen: deck = Deckfarbe, glow = Leuchtstreifen und Schwebepolster.
+// Das erste Board (Index 0) hat jeder von Anfang an.
+export const BOARDS = [
+  { id: 'kiesel', icon: '🛹', name: 'Kieselgleiter', rarity: 'gewoehnlich', deck: '#64748b', glow: '#5eead4', ...W.boards.kiesel },
+];
+export const STARTER_BOARD = 'kiesel';
+
 // Play-Buttons: Meilensteine nach Abonnenten. Eigenes Design (Stern im Rahmen), Farbe = Material.
 export const BUTTONS = [
   { id: 'silber',   name: 'Silberner Kanalknopf',   subs: W.buttonSubs[0], color: '#d7dde4' },

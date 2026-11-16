@@ -6,6 +6,8 @@ import { createNpcs } from './scene/npcs.js';
 import { buildInterior } from './scene/interior.js';
 import { buildArena } from './scene/arena.js';
 import { createPlayer } from './scene/player.js';
+import { createHoverboard } from './scene/hoverboard.js';
+import { createRide, stepRide, boardStats, equippedBoard } from './core/board.js';
 import { createCameraRig } from './scene/camera.js';
 import { createInput } from './scene/input.js';
 import { nearestTrigger, clearDistance } from './core/physics.js';
@@ -43,8 +45,10 @@ const engine = createEngine($('c'));
 const arena = buildArena(engine);
 const player = createPlayer(engine.scene);
 const rig = createCameraRig(engine.camera);
+const hoverboard = createHoverboard(engine.scene);
+let ride = null; // laufende Fahrt auf dem Hoverboard (null = zu Fuss). Wird nicht gespeichert.
 const audio = createAudio(() => S.settings.sound);
-const hud = createHud({ onUse: () => use(), onMenu: () => openMenu(panels, ctx) });
+const hud = createHud({ onUse: () => use(), onMenu: () => openMenu(panels, ctx), onBoard: () => toggleBoard() });
 const panels = createPanels($('panels'));
 const bossHud = createBossHud();
 
@@ -80,6 +84,7 @@ async function travel(id, at = null) {
   const prev = mode === 'start' ? 'start' : 'world';
   mode = 'loading';
   panels.close();
+  dismount(true);
   interior?.dispose(); interior = null;
   world = await maps.load(id);
   mapData = m;
@@ -142,6 +147,7 @@ const input = createInput({
 addEventListener('keydown', e => {
   if (e.code === 'Escape' && !panels.isOpen && mode !== 'start' && mode !== 'loading') { e.preventDefault(); openMenu(panels, ctx); }
   if (e.code === 'F3') { e.preventDefault(); S.settings.fps = !S.settings.fps; }
+  if (e.code === 'KeyH' && !e.repeat && !e.target.closest?.('input, textarea, select') && !panels.isOpen) { e.preventDefault(); toggleBoard(); }
 });
 
 // ---------- Orte wechseln ----------
@@ -169,6 +175,7 @@ function enterWorld(at = null) {
 }
 
 function enterHouse(id, keepPos = false) {
+  dismount(true);
   const keep = keepPos ? { ...player.pos } : null;
   interior?.dispose();
   showWorld(false); arena.group.visible = false;
@@ -184,6 +191,7 @@ function enterHouse(id, keepPos = false) {
 }
 
 function enterArena() {
+  dismount(true);
   showWorld(false); interior?.dispose(); interior = null;
   arena.reset(); arena.group.visible = true;
   engine.setUnderwater(false);
@@ -201,6 +209,26 @@ function leaveArena() {
   fight = null;
   const portal = world.triggers.find(t => t.kind === 'portal');
   enterWorld({ x: portal.x, z: portal.z + 2, yaw: 0, zone: 'ground' });
+}
+
+// ---------- Hoverboard (H / Knopf) ----------
+// Auf- und Absteigen nur draussen auf der Map. Beim Absteigen schwebt das Board noch kurz an der Stelle.
+function mount() {
+  const b = equippedBoard(S);
+  if (!b || mode !== 'world' || panels.isOpen) return false;
+  ride = createRide(player.facing);
+  if (hoverboard.mount(b)) engine.refreshQuality(); // neues Modell bekommt bei Grafik Hoch die passenden Materialien
+  audio.play('good');
+  return true;
+}
+function dismount(quiet = false) {
+  if (!ride) { if (quiet) hoverboard.hide(); return; }
+  ride = null;
+  if (quiet) hoverboard.hide(); else { hoverboard.park(); audio.play('nav'); }
+}
+function toggleBoard() {
+  if (mode === 'transit') return;
+  if (ride) dismount(); else if (!mount() && mode === 'world' && !equippedBoard(S)) hud.toast('🛹 Du hast gerade kein Hoverboard ausgerüstet.');
 }
 
 // ---------- Benutzen (E / Knopf) ----------
@@ -254,6 +282,7 @@ function startTransit(t) {
   transit = { kind: t.kind, t: 0, dur: t.kind === 'pad' ? 1.3 : 1.6, from: { x: player.pos.x, z: player.pos.z, y: player.y }, to: { ...t.to, y: target.y } };
   mode = 'transit';
   trigger = null;
+  if (ride) { ride.vx = ride.vz = 0; ride.lean = 0; }
 }
 function stepTransit(dt) {
   const tr = transit;
@@ -264,6 +293,7 @@ function stepTransit(dt) {
   const arc = tr.kind === 'pad' ? Math.sin(tr.t * Math.PI) * 9 : 0;
   player.y = tr.from.y + (tr.to.y - tr.from.y) * k + arc;
   player.root.position.set(player.pos.x, player.y, player.pos.z);
+  if (ride) player.ride(dt, ride.heading, 0, hoverboard.standHeight(), 0);
   // Unterwasser-Nebel umschalten, sobald die Figur durch die Wasseroberfläche geht
   engine.setUnderwater(false);
   if (player.y < -0.5) { engine.setUnderwater(true); } else engine.setSky(mapData.sky.top, mapData.sky.bottom, mapData.sky);
@@ -302,7 +332,14 @@ function logic(dt) {
 
   const mv = input.read();
   if (mode === 'transit') stepTransit(dt);
-  else if (mode === 'world') { const Z = curZone(); player.update(dt, mv, mv.run, rig.yaw, Z.colliders, Z.bounds); }
+  else if (mode === 'world') {
+    const Z = curZone();
+    if (ride) {
+      const b = equippedBoard(S), st = boardStats(b, !!Z.underwater);
+      stepRide(ride, player.pos, dt, mv, rig.yaw, st, Z.colliders, Z.bounds);
+      player.ride(dt, ride.heading, ride.lean, hoverboard.standHeight(), ride.speed / b.speed);
+    } else player.update(dt, mv, mv.run, rig.yaw, Z.colliders, Z.bounds);
+  }
   if (mode === 'world' || mode === 'transit') world.npcs?.step(dt, player.pos);
   else if (mode === 'interior') { player.update(dt, mv, mv.run, rig.yaw, interior.colliders, null); interior.clamp(player.pos); }
   else if (mode === 'arena') {
@@ -344,6 +381,7 @@ function frame(now, fallback = false) {
 
   rig.update(dt, { x: player.pos.x, z: player.pos.z, y: player.y }, mode === 'world' ? (dx, dz, d) => clearDistance(player.pos, dx, dz, d, curZone().colliders) : null);
   engine.followShadow(player.pos);
+  if (mode === 'world' || mode === 'transit') hoverboard.update(dt, player.pos.x, player.pos.z, player.y, ride?.heading ?? 0, ride?.lean ?? 0);
   if (mode === 'world' || mode === 'start' || mode === 'transit') {
     world.updatePortal?.(time, portalIsOpen(S), portalIsOpen(S) ? `OFFEN ${mmss(S.portal.open)}` : mmss(S.portal.in));
     world.update?.(time, dt);
@@ -355,6 +393,7 @@ function frame(now, fallback = false) {
 
   if (mode !== 'start') {
     hud.render(S);
+    hud.board(mode === 'world' && !!equippedBoard(S), !!ride);
     const [label, enabled] = promptFor(trigger);
     hud.prompt(label ? (isTouch() ? label : `[E] ${label}`) : null, enabled !== false);
     if (mode === 'world') S.player = { x: player.pos.x, z: player.pos.z, yaw: rig.yaw, zone };
@@ -384,10 +423,15 @@ function frame(now, fallback = false) {
         hud.toast(`🏡 Update 2: Häuser ab Nr. 6 stehen nicht mehr auf der Insel. Du hast ${eur(S.migratedRefund)} zurückbekommen.`);
         delete S.migratedRefund;
       }
+      if (S.boardHint) {
+        hud.toast(`🛹 Update 3: Du hast ein Hoverboard! ${isTouch() ? 'Knopf unten rechts' : 'Taste H'} zum Auf- und Absteigen.`);
+        delete S.boardHint;
+      }
       if (!S.tutorialDone) {
         S.tutorialDone = true;
         hud.toast('👋 Willkommen in der Kanalbucht! Deine Wohnung liegt im Norden, hinter dem Kreisel.');
         hud.toast('🎬 Geh hinein und benutze den PC für dein erstes Video.');
+        hud.toast(`🛹 Schneller unterwegs: ${isTouch() ? 'Knopf unten rechts' : 'Taste H'} fürs Hoverboard.`);
       }
       ctx.persist();
     },
@@ -402,7 +446,8 @@ addEventListener('pagehide', () => { if (mode !== 'start') ctx.persist(); });
 globalThis.kanalbucht = {
   get S() { return S; }, ctx, engine, player, rig, input, panels, maps,
   get world() { return world; }, get mode() { return mode; }, get zone() { return zone; }, get fight() { return fight; }, get trigger() { return trigger; },
-  use, enterHouse, enterArena, enterWorld, travel,
+  use, enterHouse, enterArena, enterWorld, travel, toggleBoard, hoverboard,
+  get ride() { return ride; },
   // Nur zum Testen: Map laden, auch wenn sie noch gesperrt ist
   async forceMap(id) { if (!S.maps.includes(id)) S.maps.push(id); await travel(id); },
   openPortal() { S.portal.in = 0.1; S.portal.open = 0; },

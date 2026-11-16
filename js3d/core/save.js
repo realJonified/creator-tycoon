@@ -1,7 +1,7 @@
 // Speichern der 3D-Welt: eigener Schlüssel mit Versionsnummer und Migration.
 // Beim ersten Start werden Geld und Abonnenten aus den 2D-Spielständen übernommen.
 import { W } from '../data/balance.js';
-import { PARTS, HOUSES, BUTTONS, GAMES, CHARMS, REMOVED_V1_HOUSES } from '../data/content.js';
+import { PARTS, HOUSES, BUTTONS, GAMES, CHARMS, BOARDS, STARTER_BOARD, REMOVED_V1_HOUSES } from '../data/content.js';
 import { MAPS } from '../data/maps.js';
 import { newState, VERSION } from './economy.js';
 
@@ -29,6 +29,8 @@ const MIGRATIONS = {
       migratedRefund: refund,
     };
   },
+  // Version 2 → 3 (Update 3, Hoverboards): Jeder bekommt das erste Board und hat es ausgerüstet.
+  2: d => ({ ...d, boards: [STARTER_BOARD], board: STARTER_BOARD, boardHint: true }),
 };
 
 export function sanitize(d, now = Date.now()) {
@@ -52,6 +54,11 @@ export function sanitize(d, now = Date.now()) {
   if (num(d.migratedRefund) > 0) S.migratedRefund = num(d.migratedRefund); // nur zur Anzeige nach dem Update
   const btn = new Set(BUTTONS.map(b => b.id));
   S.buttons = [...new Set(Array.isArray(d.buttons) ? d.buttons : [])].filter(id => btn.has(id));
+  // Hoverboards: nur bekannte, das erste Board gehört immer dazu. Ausgerüstet nur ein eigenes (oder keins).
+  const boardIds = new Set(BOARDS.map(b => b.id));
+  S.boards = [...new Set([STARTER_BOARD, ...(Array.isArray(d.boards) ? d.boards : [])])].filter(id => boardIds.has(id));
+  S.board = d.board === null ? null : S.boards.includes(d.board) ? d.board : STARTER_BOARD;
+  if (d.boardHint === true) S.boardHint = true; // nur für den Hinweis nach dem Update
   for (const c of CHARMS) { const n = Math.floor(num(d.charms?.[c.id])); if (n > 0) S.charms[c.id] = n; }
   S.portal.in = Math.min(W.portalEvery, num(d.portal?.in, W.portalEvery));
   S.portal.open = Math.min(W.portalOpen, num(d.portal?.open));

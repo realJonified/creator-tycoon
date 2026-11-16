@@ -93,5 +93,21 @@ export const W = {
   attackDamage: 34,       // drei Treffer und man verliert
   arenaRadius: 17,
 
+  // ---------- Hoverboards (Update 3) ----------
+  // Ein Board verkürzt nur Wege, es bringt kein Geld. Zum Vergleich: gehen 6, rennen 10 Einheiten/s.
+  board: {
+    hover: 0.38,          // so hoch schwebt das Deck über dem Boden
+    friction: 1.4,        // Abbremsen ohne Eingabe (pro Sekunde, exponentiell)
+    grip: 4.5,            // wie schnell die Fahrt in Blickrichtung des Boards einschwenkt (weniger = mehr Rutschen)
+    bounce: 0.25,         // Abprallen an Wänden (0 = kleben, 1 = voll zurück)
+    maxLean: 0.32,        // Neigung in Kurven (rad)
+    underwater: 0.55,     // unter Wasser: Tempo und Beschleunigung × diesen Faktor
+    parkSeconds: 3,       // nach dem Absteigen schwebt das Board noch so lange an der Stelle
+  },
+  // Pro Board: speed = Höchsttempo, accel = Beschleunigung, turn = Wendigkeit (rad/s)
+  boards: {
+    kiesel: { speed: 14, accel: 16, turn: 3.0 },
+  },
+
   maxValue: 1e300,        // Obergrenze, damit nie "Infinity" im Spielstand landet
 };

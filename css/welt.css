@@ -36,6 +36,13 @@ button, select, input { font: inherit; color: inherit; }
 #prompt { position: fixed; left: 50%; bottom: max(28px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 6;
   background: #111827; color: #fff; border: 3px solid #fff; border-radius: 99px; padding: 12px 22px; font-weight: 800; font-size: 1.05rem;
   box-shadow: var(--shadow); cursor: pointer; max-width: calc(100% - 32px); }
+#boardBtn { position: fixed; right: 16px; bottom: max(24px, env(safe-area-inset-bottom)); z-index: 6; width: 58px; height: 58px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.35); background: rgba(15,23,42,.72); color: #fff; font-size: 1.6rem; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0,0,0,.3); display: grid; place-items: center; touch-action: manipulation; }
+#boardBtn .key { position: absolute; right: 4px; bottom: 2px; font: 700 .62rem/1 system-ui, sans-serif; opacity: .7; }
+#boardBtn.on { background: #0d9488; border-color: #5eead4; }
+#boardBtn[hidden] { display: none; }
+@media (pointer: coarse) { #boardBtn .key { display: none; } #boardBtn { width: 64px; height: 64px; } }
 #prompt:disabled { background: #4b5563; cursor: default; }
 @media (pointer: coarse) { #prompt { bottom: auto; top: 46%; left: auto; right: 16px; transform: none; font-size: .95rem; } }
 

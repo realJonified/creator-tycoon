@@ -1,12 +1,12 @@
 // Wirtschaft der 3D-Welt: Zustand, Preise, Video-Ergebnis, Häuser, Play-Buttons.
 // Reine Funktionen ohne three.js und ohne DOM, damit sie in Node getestet werden können.
 import { W } from '../data/balance.js';
-import { PARTS, HOUSES, BUTTONS, GAMES, CHARMS } from '../data/content.js';
+import { PARTS, HOUSES, BUTTONS, GAMES, CHARMS, STARTER_BOARD } from '../data/content.js';
 import { MAPS, findMap } from '../data/maps.js';
 import { canAfford, spend, addClamped } from './num.js';
 export { findMap };
 
-export const VERSION = 2; // 2 = Update 2 (Maps)
+export const VERSION = 3; // 2 = Update 2 (Maps), 3 = Update 3 (Hoverboards)
 
 export function newState(now = Date.now()) {
   return {
@@ -16,6 +16,7 @@ export function newState(now = Date.now()) {
     maps: ['bucht'], map: 'bucht',
     houses: { bucht: ['wohnung'] }, home: 'wohnung',
     buttons: [], charms: {},
+    boards: [STARTER_BOARD], board: STARTER_BOARD, // Hoverboards: Besitz und ausgerüstetes Board
     portal: { in: W.portalEvery, open: 0 },
     lastGame: 'kugel',
     stats: { videos: 0, earned: 0, bossWins: 0, bossLosses: 0, chests: 0, bestVideo: 0, seconds: 0 },

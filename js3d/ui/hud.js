@@ -6,11 +6,13 @@ import { moneyPerSec } from '../core/economy.js';
 const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 export { mmss };
 
-export function createHud({ onUse, onMenu }) {
+export function createHud({ onUse, onMenu, onBoard }) {
   const $ = id => document.getElementById(id);
   const money = $('hMoney'), subs = $('hSubs'), rate = $('hRate'), portal = $('hPortal'), prompt = $('prompt'), fps = $('fps'), toastEl = $('toast');
   prompt.addEventListener('click', () => onUse());
   $('menuBtn').addEventListener('click', () => onMenu());
+  const boardBtn = $('boardBtn');
+  boardBtn.addEventListener('click', () => onBoard());
 
   const queue = [];
   let showing = false;
@@ -37,6 +39,13 @@ export function createHud({ onUse, onMenu }) {
       prompt.hidden = false;
       prompt.disabled = !enabled;
       setText(prompt, label);
+    },
+    // Hoverboard-Knopf: sichtbar draussen mit ausgerüstetem Board, zeigt ob man gerade fährt
+    board(available, riding) {
+      boardBtn.hidden = !available;
+      boardBtn.classList.toggle('on', riding);
+      const t = riding ? 'Absteigen' : 'Hoverboard';
+      if (boardBtn.getAttribute('aria-label') !== t) boardBtn.setAttribute('aria-label', t);
     },
     fps(on, text) { fps.hidden = !on; if (on) setText(fps, text); },
     show(on) { $('hud').hidden = !on; if (!on) prompt.hidden = true; },
