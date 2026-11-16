@@ -3,6 +3,7 @@
 import { W } from '../data/balance.js';
 import { BOARDS, STARTER_BOARD } from '../data/content.js';
 import { resolve } from './physics.js';
+import { canAfford, spend } from './num.js';
 
 export const findBoard = id => BOARDS.find(b => b.id === id) || null;
 export const ownsBoard = (S, id) => (S.boards || []).includes(id);
@@ -22,6 +23,29 @@ export function boardStats(board, underwater = false) {
 }
 
 export const STARTER = STARTER_BOARD;
+
+// ---------- Kaufen und Kisten ----------
+export const buyable = b => b.price != null;
+export function canBuyBoard(S, id) {
+  const b = findBoard(id);
+  return !!(b && buyable(b) && !ownsBoard(S, id) && canAfford(S.money, b.price));
+}
+// Kaufen rüstet das neue Board gleich aus.
+export function buyBoard(S, id) {
+  if (!canBuyBoard(S, id)) return false;
+  S.money = spend(S.money, findBoard(id).price);
+  S.boards.push(id);
+  S.board = id;
+  return true;
+}
+// Boards, die es nur aus Boss-Kisten gibt und die man noch nicht hat (pro Seltenheit)
+export const chestBoards = (S, rarity) => BOARDS.filter(b => !buyable(b) && b.id !== STARTER_BOARD && b.rarity === rarity && !ownsBoard(S, b.id));
+// Ein Board aus der Kiste gutschreiben (ausgerüstet wird es nicht automatisch)
+export function grantBoard(S, id) {
+  if (!findBoard(id) || ownsBoard(S, id)) return false;
+  S.boards.push(id);
+  return true;
+}
 
 // ---------- Fahrphysik ----------
 // Die Fahrt hat eine Richtung (heading, wie facing der Figur: Bewegung = sin/cos) und eine Geschwindigkeit (vx, vz).

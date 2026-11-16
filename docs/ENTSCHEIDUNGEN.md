@@ -27,6 +27,36 @@ Eine Zeile pro Annahme, die ich ohne Rückfrage getroffen habe.
 
   Das Board kostet 5 bis 7 Draw-Calls (mit Schatten) und etwa 1.500 Dreiecke. Die Zeitunterschiede liegen im Messrauschen dieser schnellen Grafikkarte. Dass „mit Board“ schneller wirkt, ist Zufall. Es gibt noch keine Spur. Sie kommt in Etappe 2 und ist bei Niedrig aus.
 
+### Etappe 2: Mehrere Boards, Shop, Kisten
+- Acht Boards in vier Seltenheiten, je Seltenheit eines aus dem Shop und eines nur aus Boss-Kisten. Bei Gewöhnlich ist das zweite das geschenkte erste Board.
+
+  | Board | Seltenheit | Bezug | Tempo | Wendigkeit | Spur |
+  |---|---|---|---|---|---|
+  | Kieselgleiter | Gewöhnlich | geschenkt | 14 | 3,0 | keine |
+  | Brisenbrett | Gewöhnlich | 25 Tsd. € | 15 | 3,3 | keine |
+  | Korallenkufe | Selten | 2,5 Mio. € | 17 | 3,6 | Leuchtspur |
+  | Polarpfeil | Selten | Kiste | 17 | 4,2 | Leuchtspur |
+  | Nordlicht | Episch | 500 Mio. € | 20 | 4,0 | Funken |
+  | Funkenflug | Episch | Kiste | 20 | 4,4 | Funken |
+  | Sonnenwind | Legendär | 50 Mrd. € | 23 | 4,6 | Sterne |
+  | Sternenstaub | Legendär | Kiste | 24 | 4,9 | Sterne |
+
+- Preise, Fahrwerte und Kisten-Chancen stehen in `js3d/data/balance.js` (`boards`, `boardPrices`, `rarities.*.board`), Namen und Farben in `content.js`.
+- Die Shop-Preise liegen ungefähr bei dem Geld, das man zur jeweiligen Zeit hat: 25 Tsd. nach etwa 20 Minuten, 2,5 Mio. vor Haus 4, 500 Mio. nach Map 1, 50 Mrd. auf dem Weg zur Billion. Ein Board kostet also spürbar Geld, das dann für Häuser fehlt. Das Balancing-Skript kauft keine Boards, weil sie kein Geld bringen. Die Zeiten dort gelten für Spieler ohne Board-Käufe.
+- Kisten: Bei Selten 15 %, Episch 40 %, Legendär 60 % Chance auf ein Kisten-Board dieser Seltenheit, nur eines, das man noch nicht hat. Pro Bosssieg sind das im Schnitt 3,3 % (Selten), 2 % (Episch) und 0,6 % (Legendär). Ein Board aus der Kiste wird nicht automatisch ausgerüstet. Gekaufte schon, weil man sie gerade bewusst gewählt hat. Gewöhnliche Kisten würfeln nicht nach einem Board, deshalb ändert sich die Zufallsfolge nur bei seltenen Kisten. Die Balancing-Ziele sind weiter erfüllt (Test).
+- Aussehen: Je seltener, desto mehr Schmuck. Selten hat Mittelstreifen und Heckflossen, Episch zusätzlich Seitenleuchten und grössere Polster, Legendär einen schwebenden, drehenden Ring und pulsierendes Leuchten. Pro Board werden die Formen zu zwei Meshes zusammengefügt (Deck matt, Leuchtteile unbeleuchtet), dazu der Lichtschein und bei Legendär der Ring. Das sind weniger Draw-Calls als in Etappe 1.
+- Spur: Es gibt EIN Partikelsystem für alle Boards mit höchstens 120 Teilchen (`W.trailMax`). Es braucht einen Draw-Call. Teilchen entstehen nur beim Fahren, mehr bei höherem Tempo. Bei Grafik Niedrig ist die Spur aus. Additive Teilchen waren vor hellem Gras kaum zu sehen, deshalb haben sie jetzt normale Deckkraft (RGBA pro Teilchen) und einen hellen Kern.
+- Shop: Der Bitbazar hat zwei Reiter, PC-Teile und Hoverboards. Jedes Board zeigt Vorschaufarben, Seltenheit, Spur und Balken für Tempo, Antrieb und Wendigkeit. Kauft man während der Fahrt ein anderes Board oder rüstet es aus, wechselt das Modell sofort.
+- **Messung** (Map 1, 1280 × 800, fahrend, RTX 5080):
+
+  | Stufe | zu Fuss | Kieselgleiter | Sternenstaub (mit Spur) |
+  |---|---|---|---|
+  | Niedrig | 48 Calls, 0,94 ms | 49 Calls, 1,09 ms | 50 Calls, 0,56 ms (Spur aus) |
+  | Mittel | 85 Calls, 0,78 ms | 88 Calls, 0,79 ms | 90 Calls, 0,80 ms, 37 Teilchen |
+  | Hoch | 99 Calls, 1,25 ms | 102 Calls, 1,23 ms | 104 Calls, 1,22 ms, 34 Teilchen |
+
+  Ein Board kostet jetzt 1 bis 5 Draw-Calls (mit Schatten und Spur) und höchstens 1.700 Dreiecke. Die Zeitunterschiede sind wieder Messrauschen.
+
 ## Update 2 (Branch welt-v2)
 
 ### Etappe 1: Map-System

@@ -38,13 +38,14 @@ export function openChest(panels, ctx, onDone) {
           h('strong', { class: 'rarity', style: `color:${r.rarity.color}` }, r.rarity.name.toUpperCase()),
           h('p', null, `💰 +${eur(r.money)}${r.subs ? ` · 👥 +${fmt(r.subs)} Abos` : ''}`),
           r.charm && h('p', null, `${r.charm.icon} ${r.charm.name}: +${Math.round(r.charm.bonus * 100)} % Aufrufe für immer!`),
+          r.board && h('p', { class: 'chest-board' }, `🛹 Neues Hoverboard: ${r.board.name}! Ausrüsten im Bitbazar unter „Hoverboards“.`),
           h('button', { class: 'big-btn', type: 'button', onclick: () => { panels.close(); onDone(); } }, 'Zurück zur Insel'),
         ].filter(Boolean));
         out.querySelector('button').focus();
       }, ctx.reduced() ? 0 : 900);
     });
     box.append(h('h2', null, '🏆 Glitchgolem besiegt!'), h('p', { class: 'muted' }, 'Tippe die Kiste an, um sie zu öffnen.'), chest, out,
-      h('p', { class: 'small muted' }, 'Chancen: Gewöhnlich 72 % · Selten 22 % · Episch 5 % · Legendär 1 %'));
+      h('p', { class: 'small muted' }, 'Chancen: Gewöhnlich 72 % · Selten 22 % · Episch 5 % · Legendär 1 %. Ab Selten kann ein Hoverboard drin sein.'));
   }, { dismissable: false, cls: 'center' });
 }
 

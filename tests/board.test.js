@@ -139,3 +139,76 @@ test('Das Board bringt kein Geld: Einnahmen sind mit und ohne Board gleich', () 
   tickEconomy(a, 60); tickEconomy(b, 60);
   assert.equal(a.money, b.money);
 });
+
+// ---------- Etappe 2: mehrere Boards, Shop, Kisten ----------
+import { buyBoard, canBuyBoard, chestBoards, grantBoard } from '../js3d/core/board.js';
+import { openChest } from '../js3d/core/rewards.js';
+import { RARITIES } from '../js3d/data/content.js';
+
+const RANK = Object.fromEntries(RARITIES.map((r, i) => [r.id, i]));
+
+test('Boards: jede Seltenheit vorhanden, bessere Seltenheit = schneller, Shop teurer je Stufe', () => {
+  for (const r of RARITIES) assert.ok(BOARDS.some(b => b.rarity === r.id), r.id);
+  const ids = new Set(BOARDS.map(b => b.id));
+  assert.equal(ids.size, BOARDS.length, 'ids eindeutig');
+  const best = r => Math.max(...BOARDS.filter(b => b.rarity === r).map(b => b.speed));
+  for (let i = 1; i < RARITIES.length; i++) assert.ok(best(RARITIES[i].id) > best(RARITIES[i - 1].id));
+  const shop = BOARDS.filter(b => b.price != null).sort((a, b) => a.price - b.price);
+  for (let i = 1; i < shop.length; i++) assert.ok(RANK[shop[i].rarity] >= RANK[shop[i - 1].rarity], 'Preis steigt mit der Seltenheit');
+  assert.equal(findBoard(STARTER_BOARD).price, null, 'erstes Board kostet nichts');
+  for (const r of RARITIES.slice(1)) assert.ok(BOARDS.some(b => b.rarity === r.id && b.price == null), `${r.id}: auch ein Board nur aus Kisten`);
+  assert.ok(BOARDS.every(b => ['none', 'glow', 'sparks', 'stars'].includes(b.trail)));
+});
+
+test('Board kaufen: Geld reicht genau, danach ausgerüstet, kein zweites Mal, Kisten-Boards nicht kaufbar', () => {
+  const S = newState(0);
+  const brise = findBoard('brise');
+  S.money = brise.price - 1;
+  assert.equal(buyBoard(S, 'brise'), false);
+  S.money = brise.price;
+  assert.equal(buyBoard(S, 'brise'), true);
+  assert.equal(S.money, 0);
+  assert.deepEqual(S.boards, [STARTER_BOARD, 'brise']);
+  assert.equal(S.board, 'brise');
+  S.money = 1e30;
+  assert.equal(canBuyBoard(S, 'brise'), false, 'schon gekauft');
+  assert.equal(buyBoard(S, 'polar'), false, 'nur aus Kisten');
+  assert.equal(buyBoard(S, 'gibtsnicht'), false);
+  assert.equal(equipBoard(S, STARTER_BOARD), true);
+  assert.equal(S.board, STARTER_BOARD);
+});
+
+test('Kiste: seltene Kisten können ein Kisten-Board geben, nie doppelt, nie bei gewöhnlich', () => {
+  const S = newState(0); S.subs = 1e6;
+  // rng: erst Seltenheit (0.99 → legendär), dann Board-Chance (0), dann Auswahl (0), dann Glücksbringer-Würfe
+  const seq = (...v) => { let i = 0; return () => v[Math.min(i++, v.length - 1)]; };
+  const r = openChest(S, seq(0.995, 0.9, 0, 0, 0));
+  assert.equal(r.rarity.id, 'legendaer');
+  assert.ok(r.board, 'Board erhalten');
+  assert.equal(r.board.rarity, 'legendaer');
+  assert.ok(S.boards.includes(r.board.id));
+  assert.notEqual(S.board, r.board.id, 'nicht automatisch ausgerüstet');
+  assert.deepEqual(chestBoards(S, 'legendaer'), [], 'alle legendären Kisten-Boards im Besitz');
+  const r2 = openChest(S, seq(0.995, 0.9, 0, 0, 0));
+  assert.equal(r2.board, null, 'nichts doppelt');
+  const common = openChest(S, seq(0.1, 0, 0, 0));
+  assert.equal(common.rarity.id, 'gewoehnlich'); assert.equal(common.board, null);
+  assert.equal(grantBoard(S, r.board.id), false);
+});
+
+test('Kisten-Boards sind selten: im Schnitt dauert es lange (Erwartung pro Bosssieg)', () => {
+  const chance = id => RARITIES.find(r => r.id === id);
+  const perWin = r => chance(r).odds * chance(r).board;
+  assert.ok(1 / perWin('selten') > 20, 'seltenes Kisten-Board: im Schnitt nach über 20 Siegen');
+  assert.ok(1 / perWin('legendaer') > 100, 'legendäres: über 100 Siege');
+});
+
+test('Gekaufte Boards und das ausgerüstete Board überstehen Speichern und Laden', () => {
+  const store = new Map(), storage = { getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, v) };
+  const S = newState(0); S.money = 1e12;
+  buyBoard(S, 'brise'); buyBoard(S, 'koralle'); grantBoard(S, 'polar'); equipBoard(S, 'polar');
+  saveWorld(storage, S, 1);
+  const L = loadWorld(storage, 2).state;
+  assert.deepEqual(L.boards, [STARTER_BOARD, 'brise', 'koralle', 'polar']);
+  assert.equal(L.board, 'polar');
+});

@@ -7,7 +7,7 @@ import { buildInterior } from './scene/interior.js';
 import { buildArena } from './scene/arena.js';
 import { createPlayer } from './scene/player.js';
 import { createHoverboard } from './scene/hoverboard.js';
-import { createRide, stepRide, boardStats, equippedBoard } from './core/board.js';
+import { createRide, stepRide, boardStats, equippedBoard, buyBoard, equipBoard, findBoard } from './core/board.js';
 import { createCameraRig } from './scene/camera.js';
 import { createInput } from './scene/input.js';
 import { nearestTrigger, clearDistance } from './core/physics.js';
@@ -125,6 +125,23 @@ const ctx = {
     return true;
   },
   travel: id => travel(id),
+  // Hoverboards: kaufen (rüstet gleich aus) und ausrüsten. Fährt man gerade, wechselt das Board sofort.
+  buyBoard(id) {
+    if (!buyBoard(S, id)) { audio.play('denied'); return false; }
+    audio.play('buy'); hud.toast(`🛹 ${findBoard(id).name} gehört dir und ist ausgerüstet!`);
+    ctx.boardChanged(); ctx.persist();
+    return true;
+  },
+  equipBoard(id) {
+    if (!equipBoard(S, id)) return false;
+    audio.play('nav'); ctx.boardChanged(); ctx.persist();
+    return true;
+  },
+  boardChanged() {
+    const b = equippedBoard(S);
+    if (!b) { dismount(); return; }
+    if (ride && hoverboard.swap(b)) engine.refreshQuality();
+  },
   enterArena: () => enterArena(),
   openChest() { const r = rollChest(S); ctx.persist(); return r; },
   async goHome() {
@@ -381,7 +398,7 @@ function frame(now, fallback = false) {
 
   rig.update(dt, { x: player.pos.x, z: player.pos.z, y: player.y }, mode === 'world' ? (dx, dz, d) => clearDistance(player.pos, dx, dz, d, curZone().colliders) : null);
   engine.followShadow(player.pos);
-  if (mode === 'world' || mode === 'transit') hoverboard.update(dt, player.pos.x, player.pos.z, player.y, ride?.heading ?? 0, ride?.lean ?? 0);
+  if (mode === 'world' || mode === 'transit') hoverboard.update(dt, player.pos.x, player.pos.z, player.y, ride?.heading ?? 0, ride?.lean ?? 0, ride ? ride.speed / (equippedBoard(S)?.speed || 1) : 0, engine.level !== 'niedrig');
   if (mode === 'world' || mode === 'start' || mode === 'transit') {
     world.updatePortal?.(time, portalIsOpen(S), portalIsOpen(S) ? `OFFEN ${mmss(S.portal.open)}` : mmss(S.portal.in));
     world.update?.(time, dt);
