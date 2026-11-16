@@ -99,6 +99,9 @@ button, select, input { font: inherit; color: inherit; }
 .menu-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .set-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .set-row select, .set-row input[type=range] { min-width: 150px; }
+/* Auswahl lesbar in hellem und dunklem Design (vorher weiss auf weiss im dunklen Design) */
+.set-row select { min-height: 40px; border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; background: transparent; }
+.set-row select option { color: #111827; }
 .set-row input[type=checkbox] { width: 22px; height: 22px; }
 .help { padding-left: 18px; line-height: 1.5; }
 .price { font-size: 1.6rem; font-weight: 900; color: var(--money); margin: 6px 0; }

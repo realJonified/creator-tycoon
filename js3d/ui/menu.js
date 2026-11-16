@@ -16,7 +16,7 @@ export function showStart(el, { S, source, offline, onPlay, onTitleTap }) {
     offline && h('p', { class: 'note' }, `😴 Während du weg warst, haben deine alten Videos ${eur(offline.money)} verdient.`),
     h('button', { class: 'big-btn', type: 'button', 'data-autofocus': true, onclick: onPlay }, source === 'welt' ? '▶ WEITER' : '▶ SPIELEN'),
     h('a', { class: 'link-btn', href: 'klassik.html' }, '🕹️ Klassik (2D-Spiel)'),
-    h('p', { class: 'small' }, 'PC: WASD laufen · Maus ziehen umsehen · E benutzen · Esc Menü. Handy: links Joystick, rechts wischen.'),
+    h('p', { class: 'small' }, 'PC: WASD laufen · Maus ziehen umsehen · E benutzen · H Hoverboard · Esc Menü. Handy: links Joystick, rechts wischen, 🛹 unten rechts.'),
   ));
   el.hidden = false;
   el.querySelector('[data-autofocus]').focus();
@@ -81,9 +81,10 @@ export function openHelp(panels, ctx) {
     h('ul', { class: 'help' },
       h('li', null, '🏠 Geh in deine Wohnung (Norden) und benutze den PC, um ein Video zu machen.'),
       h('li', null, '🔤 Drück die Buchstaben, bevor sie verschwinden. ✂️ Dann tippen, tippen, tippen. ⬆️ Dann hochladen.'),
-      h('li', null, '🛒 Im Bitbazar (rechts vom Kreisel) kaufst du PC-Teile und einen besseren Router.'),
+      h('li', null, '🛒 Im Bitbazar (rechts vom Kreisel) kaufst du PC-Teile, einen besseren Router und Hoverboards.'),
+      h('li', null, '🛹 Mit H (am Handy: Knopf unten rechts) steigst du aufs Hoverboard. Es macht dich schneller, aber nicht reicher.'),
       h('li', null, '🏖️ Häuser am Strand und auf der Insel kannst du an der Tür kaufen.'),
-      h('li', null, '🌀 Alle 5 Minuten öffnet sich das Portal im Kreisel. Weiche den roten Kreisen aus, deine Waffe schiesst von allein.'),
+      h('li', null, '🌀 Alle 5 Minuten öffnet sich das Portal im Kreisel. Weiche den roten Kreisen aus, deine Waffe schiesst von allein. Seltene Kisten können ein Hoverboard enthalten.'),
       h('li', null, '⭐ Ab 100.000 Abos gibt es Kanalknöpfe für deine Wand.')),
     h('button', { class: 'btn primary', type: 'button', onclick: () => openMenu(panels, ctx) }, '← Zurück'),
   ));

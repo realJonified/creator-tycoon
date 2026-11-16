@@ -19,6 +19,8 @@ export const PLAYER = {
   overheadSec: 8,       // Spiel wählen, Ergebnis ansehen, kurze Wege
   bossWinRate: 0.85,    // Anteil gewonnener Bosskämpfe
   bossSeconds: 45,      // Hinlaufen + Kampf + Kiste
+  bossWalkSec: 15,      // davon Wege (Haus → Portal → zurück) zu Fuss, rennend mit Tempo runSpeed
+  runSpeed: 10,
   partBudget: 0.04,     // PC-Teile nur kaufen, wenn sie unter diesem Anteil des nächsten Ziels kosten (alle 6 zusammen ≈ halber Zielpreis)
   // Gelegenheitsspieler: spielt sessionMin aktiv, ist dann offlineHours weg
   sessionMin: 20,
@@ -36,6 +38,7 @@ import {
 import { startRecording, stepRecording, hitLetter, startCut, tapCut } from '../js3d/core/video.js';
 import { openChest } from '../js3d/core/rewards.js';
 import { PARTS } from '../js3d/data/content.js';
+import { findBoard } from '../js3d/core/board.js';
 import { fmt, eur, fmtTime } from '../js/core/format.js';
 
 export function mulberry32(seed) {
@@ -83,8 +86,11 @@ function playVideo(S, rng) {
   return { seconds, video: { points: rec.points, quality: cut.quality, game } };
 }
 
-export function simulate({ hours = 40, seed = 1, casual = false } = {}) {
+// board = id eines Hoverboards: Wege werden kürzer (Tempo Board statt Rennen). Geld pro Video bleibt gleich.
+export function simulate({ hours = 40, seed = 1, casual = false, board = null } = {}) {
   const S = newState(0), rng = mulberry32(seed);
+  const b = board ? findBoard(board) : null;
+  const bossSeconds = Math.round(PLAYER.bossSeconds - PLAYER.bossWalkSec * (b ? 1 - PLAYER.runSpeed / b.speed : 0));
   const log = { houses: {}, maps: {}, buttons: {}, map1Done: null, wallAt: {}, videos: 0, bosses: 0, marks: [] };
   const clock = { active: 0, wall: 0, portal: false };
   let sessionLeft = PLAYER.sessionMin * 60;
@@ -95,7 +101,7 @@ export function simulate({ hours = 40, seed = 1, casual = false } = {}) {
     log.videos++;
     if (clock.portal) {      // Portal offen: Bosskampf
       clock.portal = false;
-      advance(S, log, clock, PLAYER.bossSeconds);
+      advance(S, log, clock, bossSeconds);
       if (rng() < PLAYER.bossWinRate) openChest(S, rng);
       log.bosses++;
     }
@@ -113,6 +119,20 @@ export function simulate({ hours = 40, seed = 1, casual = false } = {}) {
   }
   log.state = S;
   return log;
+}
+
+// Mittelwert über mehrere Startwerte (für den Hoverboard-Vergleich, auch im Test benutzt)
+export const BOARD_SEEDS = 20;
+export function averageRun(board, seeds = BOARD_SEEDS) {
+  const runs = Array.from({ length: seeds }, (_, i) => checkTargets(simulate({ seed: i + 1, board, hours: TARGETS.map1MaxHours + TARGETS.map2GapMaxHours })));
+  const mean = k => runs.reduce((a, c) => a + c[k], 0) / runs.length;
+  const map1 = mean('map1'), map2 = mean('map2'), gap = map2 - map1;
+  return {
+    map1, map2,
+    // Ziele für den Durchschnitt; dazu der Anteil der Läufe im Ziel (Ausreisser = viel Kistenglück)
+    ok: map1 >= TARGETS.map1MinHours * 3600 && map1 <= TARGETS.map1MaxHours * 3600 && gap >= TARGETS.map2GapMinHours * 3600 && gap <= TARGETS.map2GapMaxHours * 3600,
+    share: runs.filter(c => c.map1Ok && c.gapOk).length / runs.length,
+  };
 }
 
 // Prüft die Ziele (wird auch vom Test benutzt). Zeiten in Sekunden aktiver Spielzeit.
@@ -150,4 +170,16 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
   table('AKTIVER SPIELER', active, false);
   if (args.verlauf) for (const m of active.marks) console.log(`    ${fmtTime(m.t).padEnd(12)} ${eur(m.money).padStart(14)} ${fmt(m.subs).padStart(12)} Abos ${eur(m.rate).padStart(12)}/s`);
   table(`OFT OFFLINE (${PLAYER.sessionMin} min spielen, ${PLAYER.offlineHours} h weg)`, simulate({ seed, casual: true }), true);
+  // Hoverboard: bringt kein Geld, verkürzt nur Wege. Wie viel schneller wird man dadurch insgesamt?
+  // Mittel über 20 Startwerte: Schon ein anderer Bosskampf-Zeitpunkt verschiebt die Zufallsfolge (Kisten),
+  // und dieses Glück wiegt mehr als die paar Sekunden, die das Board spart.
+  console.log(`\nMIT HOVERBOARD (Wege zum Portal kürzer, Geld pro Video gleich; Mittel aus ${BOARD_SEEDS} Startwerten)`);
+  const avg = averageRun;
+  const base = avg(null);
+  const faster = ratio => { const p = (1 - ratio) * 100; return `${Math.abs(p).toFixed(1).replace('.', ',')} % ${p >= 0 ? 'schneller' : 'langsamer'}`; };
+  console.log(`  ${'zu Fuss'.padEnd(14)} Map 1 ${fmtTime(base.map1).padStart(10)}                       1 Bio. ${fmtTime(base.map2).padStart(10)}                    Ziele im Mittel ${base.ok ? '✔' : '✘'} (${Math.round(base.share * 100)} % der Läufe)`);
+  for (const id of ['kiesel', 'sternenstaub']) {
+    const c = avg(id);
+    console.log(`  ${findBoard(id).name.padEnd(14)} Map 1 ${fmtTime(c.map1).padStart(10)} (${faster(c.map1 / base.map1)})   1 Bio. ${fmtTime(c.map2).padStart(10)} (${faster(c.map2 / base.map2)})   Ziele im Mittel ${c.ok ? '✔' : '✘'} (${Math.round(c.share * 100)} % der Läufe)`);
+  }
 }
